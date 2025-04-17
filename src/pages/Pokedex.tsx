@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import debounce from "lodash/debounce";
 import { Navbar } from "@/components/Navbar";
+import { useContext } from "react";
+import { ThemeContext } from "@/App";
 
 interface Pokemon {
   id: number;
@@ -34,6 +36,7 @@ const generations = [
 ];
 
 const Pokedex = () => {
+  const { isDarkMode } = useContext(ThemeContext);
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentGen, setCurrentGen] = useState(1);
@@ -108,10 +111,12 @@ const Pokedex = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f0f4f8] to-[#d9e4f5]">
+    <div className={`min-h-screen ${isDarkMode 
+      ? "bg-gradient-to-b from-gray-900 to-gray-800" 
+      : "bg-gradient-to-b from-[#f0f4f8] to-[#d9e4f5]"}`}>
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">Pokédex</h1>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-8 text-center">Pokédex</h1>
         
         <div className="mb-6">
           <Input
@@ -119,7 +124,7 @@ const Pokedex = () => {
             placeholder="Search by name or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md mx-auto"
+            className="max-w-md mx-auto dark:bg-gray-800 dark:text-white"
           />
         </div>
 
@@ -132,7 +137,7 @@ const Pokedex = () => {
                 loadPokemon(gen);
               }}
               variant={currentGen === gen ? "default" : "outline"}
-              className={currentGen === gen ? "bg-red-500 hover:bg-red-600" : ""}
+              className={currentGen === gen ? "bg-red-500 hover:bg-red-600" : "dark:text-white dark:border-gray-700"}
             >
               Gen {gen}
             </Button>
@@ -143,7 +148,10 @@ const Pokedex = () => {
           {pokemon.map((p) => (
             <div
               key={p.id}
-              className="bg-gradient-to-b from-white to-[#f9f9f9] rounded-[15px] p-4 shadow-sm hover:shadow-md hover:scale-105 transition-all relative cursor-pointer"
+              className={`${isDarkMode 
+                ? "bg-gradient-to-b from-gray-800 to-gray-900" 
+                : "bg-gradient-to-b from-white to-[#f9f9f9]"} 
+                rounded-[15px] p-4 shadow-sm hover:shadow-md hover:scale-105 transition-all relative cursor-pointer`}
               onClick={() => {
                 const buttons = document.querySelectorAll('.nominate-button');
                 buttons.forEach(btn => {
@@ -162,10 +170,10 @@ const Pokedex = () => {
                 className="w-32 h-32 mx-auto"
               />
               <div className="text-center mt-2">
-                <h3 className="text-lg font-semibold capitalize">
+                <h3 className="text-lg font-semibold capitalize dark:text-white">
                   {p.name} #{p.id}
                 </h3>
-                <div className="flex gap-2 justify-center mt-1">
+                <div className="flex gap-2 justify-center mt-1 flex-wrap">
                   {p.types.map(({ type }) => (
                     <span
                       key={type.name}
@@ -175,7 +183,7 @@ const Pokedex = () => {
                     </span>
                   ))}
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 dark:text-gray-300">
                   HP: {p.stats.find(s => s.stat.name === 'hp')?.base_stat}
                 </div>
                 <Button
