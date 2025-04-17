@@ -17,6 +17,9 @@ export const Navbar = () => {
             <span className="text-xl font-semibold text-gray-900">PokéBid</span>
           </Link>
           <div className="flex gap-6 items-center">
+            <Link to="/pokedex" className="text-gray-700 hover:text-gray-900">
+              Pokédex
+            </Link>
             <Link to="/how-to-play" className="text-gray-700 hover:text-gray-900">
               How to Play
             </Link>

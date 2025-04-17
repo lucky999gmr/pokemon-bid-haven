@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
-import { Target, ListChecks, Zap } from "lucide-react";
+import { Target, ListChecks, Book } from "lucide-react";
 
 const Index = () => {
   return (
@@ -49,10 +49,10 @@ const Index = () => {
               borderColor="border-t-blue-500"
             />
             <FeatureCard
-              icon={<Zap className="w-12 h-12 text-yellow-500" />}
-              title="Real-Time Updates"
-              description="Experience seamless real-time bidding with instant notifications and live updates."
-              borderColor="border-t-yellow-500"
+              icon={<Book className="w-12 h-12 text-green-500" />}
+              title="Pokédex"
+              description="Access comprehensive information about all Pokémon species, including stats, types, and evolution chains."
+              borderColor="border-t-green-500"
             />
           </div>
         </div>
