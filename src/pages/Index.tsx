@@ -1,30 +1,58 @@
 
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
+import { Target, ListChecks, Zap } from "lucide-react";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Welcome to PokéBid Haven
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center max-w-4xl mx-auto">
+          <h1 className="text-6xl font-bold text-pink-400 mb-8">
+            Welcome to PokéBid
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Your premier destination for trading rare Pokémon cards
+          <p className="text-xl text-gray-700 mb-12">
+            Bid on your favorite Pokémon in an exciting turn-based auction system. Collect,
+            compete, and become the ultimate Pokémon collector!
           </p>
+          <div className="flex justify-center gap-4 mb-20">
+            <Link to="/auth">
+              <Button className="bg-red-500 hover:bg-red-600 text-lg px-8 py-6 h-auto">
+                Get Started
+              </Button>
+            </Link>
+            <Link to="/auth">
+              <Button variant="outline" className="text-lg px-8 py-6 h-auto">
+                Login
+              </Button>
+            </Link>
+            <Link to="/how-to-play">
+              <Button variant="outline" className="text-lg px-8 py-6 h-auto">
+                How to Play
+              </Button>
+            </Link>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
             <FeatureCard
-              title="Discover"
-              description="Browse through our extensive collection of rare Pokémon cards"
+              icon={<Target className="w-12 h-12 text-red-500" />}
+              title="Turn-Based Bidding"
+              description="Take turns bidding on Pokémon in a strategic auction system where timing is key."
+              borderColor="border-t-red-500"
             />
             <FeatureCard
-              title="Bid"
-              description="Participate in exciting auctions for your favorite Pokémon"
+              icon={<ListChecks className="w-12 h-12 text-blue-500" />}
+              title="Collection Tracking"
+              description="Build and showcase your Pokémon collection with detailed stats and sorting options."
+              borderColor="border-t-blue-500"
             />
             <FeatureCard
-              title="Trade"
-              description="Build your collection by trading with other enthusiasts"
+              icon={<Zap className="w-12 h-12 text-yellow-500" />}
+              title="Real-Time Updates"
+              description="Experience seamless real-time bidding with instant notifications and live updates."
+              borderColor="border-t-yellow-500"
             />
           </div>
         </div>
@@ -33,10 +61,23 @@ const Index = () => {
   );
 };
 
-const FeatureCard = ({ title, description }: { title: string; description: string }) => (
-  <div className="bg-white p-6 rounded-lg shadow-sm">
-    <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-    <p className="text-gray-600">{description}</p>
+const FeatureCard = ({ 
+  icon, 
+  title, 
+  description, 
+  borderColor 
+}: { 
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  borderColor: string;
+}) => (
+  <div className={`bg-white p-8 rounded-lg shadow-sm border-t-4 ${borderColor}`}>
+    <div className="flex flex-col items-center text-center">
+      <div className="mb-4">{icon}</div>
+      <h3 className="text-xl font-semibold text-gray-900 mb-4">{title}</h3>
+      <p className="text-gray-600">{description}</p>
+    </div>
   </div>
 );
 
