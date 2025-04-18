@@ -9,147 +9,21 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      auctions: {
-        Row: {
-          created_at: string
-          current_price: number
-          end_time: string
-          id: string
-          is_active: boolean | null
-          pokemon_id: string
-          seller_id: string
-          start_price: number
-          start_time: string
-        }
-        Insert: {
-          created_at?: string
-          current_price: number
-          end_time: string
-          id?: string
-          is_active?: boolean | null
-          pokemon_id: string
-          seller_id: string
-          start_price: number
-          start_time?: string
-        }
-        Update: {
-          created_at?: string
-          current_price?: number
-          end_time?: string
-          id?: string
-          is_active?: boolean | null
-          pokemon_id?: string
-          seller_id?: string
-          start_price?: number
-          start_time?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "auctions_pokemon_id_fkey"
-            columns: ["pokemon_id"]
-            isOneToOne: false
-            referencedRelation: "pokemons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "auctions_seller_id_fkey"
-            columns: ["seller_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      bids: {
-        Row: {
-          amount: number
-          auction_id: string
-          bidder_id: string
-          created_at: string
-          id: string
-        }
-        Insert: {
-          amount: number
-          auction_id: string
-          bidder_id: string
-          created_at?: string
-          id?: string
-        }
-        Update: {
-          amount?: number
-          auction_id?: string
-          bidder_id?: string
-          created_at?: string
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bids_auction_id_fkey"
-            columns: ["auction_id"]
-            isOneToOne: false
-            referencedRelation: "auctions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bids_bidder_id_fkey"
-            columns: ["bidder_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      pokemons: {
-        Row: {
-          base_price: number
-          created_at: string
-          description: string | null
-          id: string
-          image_url: string
-          name: string
-          rarity: string | null
-          type: string | null
-        }
-        Insert: {
-          base_price?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url: string
-          name: string
-          rarity?: string | null
-          type?: string | null
-        }
-        Update: {
-          base_price?: number
-          created_at?: string
-          description?: string | null
-          id?: string
-          image_url?: string
-          name?: string
-          rarity?: string | null
-          type?: string | null
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
-          avatar_url: string | null
-          created_at: string
           id: string
-          username: string
+          updated_at: string | null
+          username: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          created_at?: string
           id: string
-          username: string
+          updated_at?: string | null
+          username?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          created_at?: string
           id?: string
-          username?: string
+          updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }
