@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,11 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { UserContext } from "@/App";
 
 export const JoinGameDialog = () => {
   const [code, setCode] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useContext(UserContext);
 
   const handleJoinGame = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +45,13 @@ export const JoinGameDialog = () => {
         throw new Error("Game is full");
       }
 
-      await supabase.from('players').insert({ game_id: game.id });
+      // Insert a new player record with the user_id
+      const { error } = await supabase.from('players').insert({ 
+        game_id: game.id,
+        user_id: user?.id
+      });
+      
+      if (error) throw error;
       
       toast({
         title: "Success",

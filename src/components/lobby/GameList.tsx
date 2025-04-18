@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { UserContext } from "@/App";
 import { useContext } from "react";
 
+type Player = {
+  user_id: string;
+  profiles: {
+    username: string;
+  } | null;
+};
+
 type Game = {
   id: string;
   name: string;
@@ -13,12 +20,7 @@ type Game = {
   max_players: number;
   host_id: string;
   status: string;
-  players: {
-    user_id: string;
-    profiles: {
-      username: string;
-    };
-  }[];
+  players: Player[];
 };
 
 export const GameList = () => {
@@ -54,10 +56,17 @@ export const GameList = () => {
   }, []);
 
   const fetchGames = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('games')
       .select(`
-        *,
+        id,
+        name,
+        code,
+        max_players,
+        host_id,
+        status,
+        created_at,
+        updated_at,
         players(
           user_id,
           profiles(
@@ -68,7 +77,20 @@ export const GameList = () => {
       .eq('status', 'waiting')
       .order('created_at', { ascending: false });
 
-    if (data) setGames(data);
+    if (error) {
+      console.error('Error fetching games:', error);
+      return;
+    }
+
+    if (data) {
+      // Transform the data to match our Game type
+      const transformedGames: Game[] = data.map(game => ({
+        ...game,
+        players: game.players as Player[]
+      }));
+      
+      setGames(transformedGames);
+    }
   };
 
   const startGame = async (gameId: string) => {
@@ -106,7 +128,7 @@ export const GameList = () => {
               >
                 <CircleUser className="text-gray-400" />
                 <span className={`text-sm ${player.user_id === game.host_id ? 'text-yellow-400' : 'text-gray-200'}`}>
-                  {player.profiles.username}
+                  {player.profiles?.username || 'Unknown User'}
                 </span>
               </div>
             ))}

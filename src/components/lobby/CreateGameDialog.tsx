@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,24 +12,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { UserContext } from "@/App";
 
 export const CreateGameDialog = () => {
   const [name, setName] = useState("");
   const [maxPlayers, setMaxPlayers] = useState("4");
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useContext(UserContext);
 
   const handleCreateGame = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const code = await supabase.rpc('generate_game_code');
-      await supabase.from('games').insert({
+      // First, get a game code using RPC
+      const { data: code, error: codeError } = await supabase.rpc('generate_game_code');
+      
+      if (codeError) throw codeError;
+      
+      // Then create the game with the generated code
+      const { error: insertError } = await supabase.from('games').insert({
         name,
         code,
         max_players: parseInt(maxPlayers),
+        host_id: user?.id
       });
+
+      if (insertError) throw insertError;
 
       toast({
         title: "Success",
