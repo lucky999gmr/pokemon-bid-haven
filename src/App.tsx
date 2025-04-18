@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { createContext } from "react";
 import Index from "./pages/Index";
@@ -11,6 +11,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Pokedex from "./pages/Pokedex";
 import HowToPlay from "./pages/HowToPlay";
+import Lobby from "./pages/Lobby";
+import Profile from "./pages/Profile";
 import { supabase } from "./integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
@@ -80,6 +82,8 @@ const App = () => {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/pokedex" element={<Pokedex />} />
                 <Route path="/how-to-play" element={<HowToPlay />} />
+                <Route path="/lobby" element={<Lobby />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
