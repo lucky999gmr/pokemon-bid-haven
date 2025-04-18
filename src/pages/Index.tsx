@@ -30,9 +30,7 @@ const Index = () => {
                 </Button>
               </Link>}
             {!user && <Link to="/auth">
-                <Button variant="outline" className="text-lg px-8 py-6 h-auto dark:border-gray-700 dark:text-white rounded-2xl">
-                  Login
-                </Button>
+                
               </Link>}
             <Link to="/how-to-play">
               <Button variant="outline" className="text-lg px-8 py-6 h-auto dark:border-gray-700 dark:text-white rounded-2xl">
