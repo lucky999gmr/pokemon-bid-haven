@@ -8,7 +8,7 @@ import { useContext } from "react";
 
 type Player = {
   user_id: string;
-  profiles: {
+  profiles?: {
     username: string;
   } | null;
 };
@@ -56,40 +56,82 @@ export const GameList = () => {
   }, []);
 
   const fetchGames = async () => {
-    const { data, error } = await supabase
-      .from('games')
-      .select(`
-        id,
-        name,
-        code,
-        max_players,
-        host_id,
-        status,
-        created_at,
-        updated_at,
-        players(
-          user_id,
-          profiles(
-            username
-          )
-        )
-      `)
-      .eq('status', 'waiting')
-      .order('created_at', { ascending: false });
+    try {
+      // First, fetch games
+      const { data: gamesData, error: gamesError } = await supabase
+        .from('games')
+        .select(`
+          id,
+          name,
+          code,
+          max_players,
+          host_id,
+          status,
+          created_at,
+          updated_at
+        `)
+        .eq('status', 'waiting')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching games:', error);
-      return;
-    }
+      if (gamesError) {
+        console.error('Error fetching games:', gamesError);
+        return;
+      }
 
-    if (data) {
-      // Transform the data to match our Game type
-      const transformedGames: Game[] = data.map(game => ({
-        ...game,
-        players: game.players as Player[]
-      }));
-      
-      setGames(transformedGames);
+      if (!gamesData || gamesData.length === 0) {
+        setGames([]);
+        return;
+      }
+
+      // Then for each game, fetch its players
+      const gamesWithPlayers: Game[] = await Promise.all(
+        gamesData.map(async (game) => {
+          const { data: playersData, error: playersError } = await supabase
+            .from('players')
+            .select(`
+              user_id
+            `)
+            .eq('game_id', game.id);
+
+          if (playersError) {
+            console.error(`Error fetching players for game ${game.id}:`, playersError);
+            return { ...game, players: [] };
+          }
+
+          // For each player, fetch their profile
+          const playersWithProfiles: Player[] = await Promise.all(
+            (playersData || []).map(async (player) => {
+              const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', player.user_id)
+                .single();
+
+              if (profileError) {
+                console.error(`Error fetching profile for user ${player.user_id}:`, profileError);
+                return { 
+                  user_id: player.user_id,
+                  profiles: null 
+                };
+              }
+
+              return {
+                user_id: player.user_id,
+                profiles: profileData
+              };
+            })
+          );
+
+          return {
+            ...game,
+            players: playersWithProfiles
+          };
+        })
+      );
+
+      setGames(gamesWithPlayers);
+    } catch (error) {
+      console.error('Unexpected error in fetchGames:', error);
     }
   };
 
