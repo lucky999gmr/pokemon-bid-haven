@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +42,11 @@ const Pokedex = () => {
   const [offset, setOffset] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [nominated] = useState(new Set<number>());
-  const [allPokemon, setAllPokemon] = useState<Pokemon[]>([]);
+  
+  // Store all Pokemon for the current generation
+  const [allPokemonByGen, setAllPokemonByGen] = useState<Map<number, Pokemon[]>>(new Map());
+  
+  // Cache for fetched Pokemon
   const pokemonCache = new Map<string, Pokemon>();
 
   const fetchPokemon = async (id: number) => {
@@ -57,6 +60,7 @@ const Pokedex = () => {
     return data;
   };
 
+  // Load initial Pokemon data for the current generation
   const loadPokemon = async (gen: number, resetOffset = true) => {
     setLoading(true);
     const genData = generations[gen - 1];
@@ -74,12 +78,15 @@ const Pokedex = () => {
       const newPokemon = resetOffset ? results : [...pokemon, ...results];
       setPokemon(newPokemon);
       
-      // Also update allPokemon for the current generation to facilitate search
-      if (resetOffset) {
-        setAllPokemon(results);
-      } else {
-        setAllPokemon([...allPokemon, ...results]);
-      }
+      // Add to the generation-specific cache
+      const currentGenPokemon = allPokemonByGen.get(gen) || [];
+      const updatedGenPokemon = [...currentGenPokemon, ...results.filter(p => 
+        !currentGenPokemon.some(cp => cp.id === p.id)
+      )];
+      
+      const newPokemonByGen = new Map(allPokemonByGen);
+      newPokemonByGen.set(gen, updatedGenPokemon);
+      setAllPokemonByGen(newPokemonByGen);
       
       setOffset(resetOffset ? 20 : offset + 20);
     } catch (error) {
@@ -89,19 +96,67 @@ const Pokedex = () => {
     }
   };
 
-  const performSearch = useCallback((term: string) => {
+  // Search through all loaded Pokemon across all generations
+  const performSearch = useCallback(async (term: string) => {
     if (!term.trim()) {
-      setPokemon(allPokemon);
+      // If search is cleared, show the current generation
+      const genPokemon = allPokemonByGen.get(currentGen) || [];
+      setPokemon(genPokemon.slice(0, Math.min(offset, genPokemon.length)));
       return;
     }
     
-    const searchResults = allPokemon.filter(p => 
-      p.name.toLowerCase().includes(term.toLowerCase()) || 
-      String(p.id) === term
-    );
+    setLoading(true);
     
-    setPokemon(searchResults);
-  }, [allPokemon]);
+    try {
+      let results: Pokemon[] = [];
+      
+      // Check if it's a name or ID search
+      const isIdSearch = !isNaN(Number(term));
+      
+      if (isIdSearch) {
+        // Try to fetch by ID directly
+        const id = Number(term);
+        try {
+          const pokemon = await fetchPokemon(id);
+          results = [pokemon];
+        } catch (error) {
+          console.error(`Pokemon with ID ${id} not found`);
+        }
+      } else {
+        // Name search - search all cached Pokemon across all generations
+        const lowercaseTerm = term.toLowerCase();
+        
+        for (const [, genPokemon] of allPokemonByGen) {
+          const matchingPokemon = genPokemon.filter(p => 
+            p.name.toLowerCase().includes(lowercaseTerm)
+          );
+          results = [...results, ...matchingPokemon];
+        }
+        
+        // If we haven't found any matching Pokemon and there might be more to load
+        if (results.length === 0) {
+          // Try to fetch by name directly from API
+          try {
+            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${lowercaseTerm}`);
+            if (response.ok) {
+              const data = await response.json();
+              results = [data];
+              // Add to cache
+              pokemonCache.set(String(data.id), data);
+            }
+          } catch (error) {
+            console.error(`Error searching for ${term}:`, error);
+          }
+        }
+      }
+      
+      setPokemon(results);
+    } catch (error) {
+      console.error("Error during search:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [allPokemonByGen, currentGen, offset]);
 
   const debouncedSearch = useCallback(
     debounce((term: string) => {
@@ -114,6 +169,7 @@ const Pokedex = () => {
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
+  // Initial load
   useEffect(() => {
     loadPokemon(1);
   }, []);
@@ -124,6 +180,22 @@ const Pokedex = () => {
     }
     nominated.add(id);
     alert(`Pokemon #${id} has been nominated!`);
+  };
+
+  // When changing generation
+  const changeGeneration = (gen: number) => {
+    setCurrentGen(gen);
+    setSearchTerm(""); // Clear search
+    
+    // If we already have Pokemon for this generation, use them
+    const genPokemon = allPokemonByGen.get(gen);
+    if (genPokemon && genPokemon.length > 0) {
+      setPokemon(genPokemon.slice(0, 20));
+      setOffset(20);
+    } else {
+      // Otherwise load from API
+      loadPokemon(gen);
+    }
   };
 
   return (
@@ -148,11 +220,7 @@ const Pokedex = () => {
           {generations.map(({ gen }) => (
             <Button
               key={gen}
-              onClick={() => {
-                setCurrentGen(gen);
-                loadPokemon(gen);
-                setSearchTerm(""); // Clear search when changing generations
-              }}
+              onClick={() => changeGeneration(gen)}
               variant={currentGen === gen ? "default" : "outline"}
               className={currentGen === gen ? "bg-red-500 hover:bg-red-600" : "dark:text-white dark:border-gray-700"}
             >
@@ -160,6 +228,15 @@ const Pokedex = () => {
             </Button>
           ))}
         </div>
+
+        {loading && (
+          <div className="text-center py-8">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] dark:text-white" role="status">
+              <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Loading...</span>
+            </div>
+            <p className="mt-2 dark:text-white">Loading Pokémon...</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {pokemon.map((p) => (

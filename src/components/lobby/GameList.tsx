@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { UserContext } from "@/App";
 import { useContext } from "react";
+import { toast } from "@/hooks/use-toast";
 
 type Player = {
   user_id: string;
@@ -26,6 +27,7 @@ type Game = {
 export const GameList = () => {
   const [games, setGames] = useState<Game[]>([]);
   const { user } = useContext(UserContext);
+  const [isStartingGame, setIsStartingGame] = useState<string | null>(null);
 
   useEffect(() => {
     // Initial fetch
@@ -136,10 +138,38 @@ export const GameList = () => {
   };
 
   const startGame = async (gameId: string) => {
-    await supabase
-      .from('games')
-      .update({ status: 'in_progress' })
-      .eq('id', gameId);
+    if (isStartingGame) return; // Prevent multiple clicks
+    
+    setIsStartingGame(gameId);
+    try {
+      const { error } = await supabase
+        .from('games')
+        .update({ status: 'in_progress' })
+        .eq('id', gameId);
+      
+      if (error) {
+        console.error("Error starting game:", error);
+        toast({
+          title: "Error",
+          description: "Failed to start the game. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Game started successfully!",
+        });
+      }
+    } catch (error) {
+      console.error("Unexpected error starting game:", error);
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingGame(null);
+    }
   };
 
   return (
@@ -180,9 +210,9 @@ export const GameList = () => {
             <Button
               onClick={() => startGame(game.id)}
               className="w-full bg-red-500 hover:bg-red-600"
-              disabled={game.players.length < 2}
+              disabled={game.players.length < 2 || isStartingGame === game.id}
             >
-              Start Game
+              {isStartingGame === game.id ? "Starting..." : "Start Game"}
             </Button>
           )}
         </div>
