@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const AuthForm = () => {
   const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -27,7 +27,6 @@ export const AuthForm = () => {
 
     try {
       setLoading(true);
-      const email = `${username}@placeholder.com`;
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -59,7 +58,6 @@ export const AuthForm = () => {
     
     try {
       setLoading(true);
-      const email = `${username}@placeholder.com`;
       
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -96,10 +94,10 @@ export const AuthForm = () => {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <Input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full"
             />
@@ -124,10 +122,10 @@ export const AuthForm = () => {
         <form onSubmit={handleSignUp} className="space-y-4">
           <div>
             <Input
-              type="text"
-              placeholder="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full"
             />

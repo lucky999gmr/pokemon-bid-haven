@@ -43,6 +43,7 @@ const Pokedex = () => {
   const [offset, setOffset] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [nominated] = useState(new Set<number>());
+  const [allPokemon, setAllPokemon] = useState<Pokemon[]>([]);
   const pokemonCache = new Map<string, Pokemon>();
 
   const fetchPokemon = async (id: number) => {
@@ -69,7 +70,17 @@ const Pokedex = () => {
         promises.push(fetchPokemon(i));
       }
       const results = await Promise.all(promises);
-      setPokemon(prev => resetOffset ? results : [...prev, ...results]);
+      
+      const newPokemon = resetOffset ? results : [...pokemon, ...results];
+      setPokemon(newPokemon);
+      
+      // Also update allPokemon for the current generation to facilitate search
+      if (resetOffset) {
+        setAllPokemon(results);
+      } else {
+        setAllPokemon([...allPokemon, ...results]);
+      }
+      
       setOffset(resetOffset ? 20 : offset + 20);
     } catch (error) {
       console.error("Error fetching Pokemon:", error);
@@ -78,20 +89,25 @@ const Pokedex = () => {
     }
   };
 
+  const performSearch = useCallback((term: string) => {
+    if (!term.trim()) {
+      setPokemon(allPokemon);
+      return;
+    }
+    
+    const searchResults = allPokemon.filter(p => 
+      p.name.toLowerCase().includes(term.toLowerCase()) || 
+      String(p.id) === term
+    );
+    
+    setPokemon(searchResults);
+  }, [allPokemon]);
+
   const debouncedSearch = useCallback(
     debounce((term: string) => {
-      if (!term) {
-        loadPokemon(currentGen);
-        return;
-      }
-      
-      const searchResults = Array.from(pokemonCache.values()).filter(p => 
-        p.name.toLowerCase().includes(term.toLowerCase()) || 
-        String(p.id) === term
-      );
-      setPokemon(searchResults);
+      performSearch(term);
     }, 300),
-    [currentGen]
+    [performSearch]
   );
 
   useEffect(() => {
@@ -135,6 +151,7 @@ const Pokedex = () => {
               onClick={() => {
                 setCurrentGen(gen);
                 loadPokemon(gen);
+                setSearchTerm(""); // Clear search when changing generations
               }}
               variant={currentGen === gen ? "default" : "outline"}
               className={currentGen === gen ? "bg-red-500 hover:bg-red-600" : "dark:text-white dark:border-gray-700"}

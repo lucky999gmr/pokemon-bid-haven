@@ -39,10 +39,14 @@ export const Navbar = () => {
     }
   };
   
-  // Get username from email
-  const username = user ? user.email?.split('@')[0] : '';
-  // Get initials for avatar
-  const initials = username ? username.substring(0, 2).toUpperCase() : '';
+  // Get initials for avatar from email
+  const getInitials = () => {
+    if (!user || !user.email) return '';
+    
+    const emailParts = user.email.split('@');
+    const name = emailParts[0];
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -70,7 +74,7 @@ export const Navbar = () => {
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-red-500 text-white">
-                        {initials}
+                        {getInitials()}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -78,7 +82,6 @@ export const Navbar = () => {
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-1 leading-none">
-                      <p className="font-medium">{username}</p>
                       <p className="w-[200px] truncate text-sm text-muted-foreground">
                         {user.email}
                       </p>
