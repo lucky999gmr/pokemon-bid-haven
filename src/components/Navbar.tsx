@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Moon, Sun, LogOut, User } from "lucide-react";
 import { Button } from "./ui/button";
@@ -6,14 +5,8 @@ import { useContext } from "react";
 import { ThemeContext, UserContext } from "@/App";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
 export const Navbar = () => {
   const {
     isDarkMode,
@@ -22,7 +15,6 @@ export const Navbar = () => {
   const {
     user
   } = useContext(UserContext);
-  
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -38,16 +30,14 @@ export const Navbar = () => {
       });
     }
   };
-  
+
   // Get initials for avatar from email
   const getInitials = () => {
     if (!user || !user.email) return '';
-    
     const emailParts = user.email.split('@');
     const name = emailParts[0];
     return name.substring(0, 2).toUpperCase();
   };
-
   return <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
@@ -62,14 +52,9 @@ export const Navbar = () => {
               How to Play
             </Link>
             
-            {user && (
-              <Link to="/lobby" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
-                Lobby
-              </Link>
-            )}
+            {user}
             
-            {user ? (
-              <DropdownMenu>
+            {user ? <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
@@ -98,17 +83,14 @@ export const Navbar = () => {
                     <span>Logout</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
+              </DropdownMenu> : <>
                 <Link to="/auth" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
                   Login
                 </Link>
                 <Link to="/auth">
                   <Button variant="default">Sign Up</Button>
                 </Link>
-              </>
-            )}
+              </>}
             
             <Button variant="ghost" size="icon" onClick={toggleTheme} className="ml-2">
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
