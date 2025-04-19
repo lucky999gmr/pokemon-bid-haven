@@ -30,7 +30,8 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
         .eq("status", "active");
 
       if (!error && data) {
-        setNominatedPokemon(data as NominatedPokemon[]);
+        // Use a double casting through unknown to satisfy TypeScript
+        setNominatedPokemon(data as unknown as NominatedPokemon[]);
       }
     };
 
