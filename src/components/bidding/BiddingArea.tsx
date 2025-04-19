@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { UserContext } from "@/App";
 
@@ -17,6 +16,10 @@ interface NominatedPokemon {
   current_bidder_id: string | null;
 }
 
+interface PlayerBalance {
+  balance: number;
+}
+
 export const BiddingArea = ({ gameId }: { gameId: string }) => {
   const [nominatedPokemon, setNominatedPokemon] = useState<NominatedPokemon[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,16 +28,14 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
 
   useEffect(() => {
     const fetchNominated = async () => {
-      // Use a type assertion to work around TypeScript limitations
       const { data, error } = await supabase
-        .from('nominated_pokemon' as any)
+        .from('nominated_pokemon')
         .select("*")
         .eq("game_id", gameId)
         .eq("status", "active");
 
       if (!error && data) {
-        // Use a double casting through unknown to satisfy TypeScript
-        setNominatedPokemon(data as unknown as NominatedPokemon[]);
+        setNominatedPokemon(data as NominatedPokemon[]);
       }
     };
 
@@ -76,8 +77,7 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
       
       const data = await response.json();
 
-      // Use a type assertion to work around TypeScript limitations
-      await supabase.from('nominated_pokemon' as any).insert({
+      await supabase.from('nominated_pokemon').insert({
         game_id: gameId,
         pokemon_id: data.id,
         pokemon_name: data.name,
@@ -127,12 +127,12 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
 
       // Get player's balance
       const { data: balanceData, error: balanceError } = await supabase
-        .from('player_balances' as any)
+        .from('player_balances')
         .select("balance")
         .eq("player_id", playerData.id)
         .single();
 
-      if (balanceError || !balanceData) {
+      if (balanceError || !balanceData || typeof balanceData.balance !== 'number') {
         throw new Error("Could not retrieve your balance");
       }
 
@@ -144,7 +144,7 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
 
       // Update the pokemon with the new bid
       const { error: updateError } = await supabase
-        .from('nominated_pokemon' as any)
+        .from('nominated_pokemon')
         .update({
           current_price: newBidAmount,
           current_bidder_id: user.id

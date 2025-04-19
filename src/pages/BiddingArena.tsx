@@ -9,12 +9,18 @@ import { BiddingArea } from "@/components/bidding/BiddingArea";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 
+interface Game {
+  id: string;
+  status: string;
+  // Add other game properties as needed
+}
+
 const BiddingArena = () => {
   const { gameId } = useParams();
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [game, setGame] = useState<any>(null);
+  const [game, setGame] = useState<Game | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -89,15 +95,17 @@ const BiddingArena = () => {
           filter: `id=eq.${gameId}`
         },
         (payload) => {
-          setGame(payload.new);
-          
-          // If game status changes to 'completed', redirect to results
-          if (payload.new.status === 'completed') {
-            toast({
-              title: "Game Over",
-              description: "The bidding phase has ended"
-            });
-            navigate(`/lobby`);
+          if (payload.new && 'status' in payload.new) {
+            setGame(payload.new as Game);
+            
+            // If game status changes to 'completed', redirect to results
+            if (payload.new.status === 'completed') {
+              toast({
+                title: "Game Over",
+                description: "The bidding phase has ended"
+              });
+              navigate(`/lobby`);
+            }
           }
         }
       )

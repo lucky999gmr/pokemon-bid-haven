@@ -42,6 +42,85 @@ export type Database = {
         }
         Relationships: []
       }
+      nominated_pokemon: {
+        Row: {
+          created_at: string | null
+          current_bidder_id: string | null
+          current_price: number
+          game_id: string | null
+          id: string
+          pokemon_id: number
+          pokemon_image: string
+          pokemon_name: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_bidder_id?: string | null
+          current_price?: number
+          game_id?: string | null
+          id?: string
+          pokemon_id: number
+          pokemon_image: string
+          pokemon_name: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_bidder_id?: string | null
+          current_price?: number
+          game_id?: string | null
+          id?: string
+          pokemon_id?: number
+          pokemon_image?: string
+          pokemon_name?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nominated_pokemon_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_balances: {
+        Row: {
+          balance: number
+          created_at: string | null
+          id: string
+          player_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          balance?: number
+          created_at?: string | null
+          id?: string
+          player_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          balance?: number
+          created_at?: string | null
+          id?: string
+          player_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_balances_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           game_id: string
