@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { UserContext } from "@/App";
 import { useContext } from "react";
 import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 type Player = {
   user_id: string;
@@ -28,6 +29,7 @@ export const GameList = () => {
   const [games, setGames] = useState<Game[]>([]);
   const { user } = useContext(UserContext);
   const [isStartingGame, setIsStartingGame] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Initial fetch
@@ -152,7 +154,7 @@ export const GameList = () => {
         // Use a for loop with type assertions to avoid TypeScript errors
         for (const player of players) {
           await supabase
-            .from('player_balances' as any)
+            .from('player_balances')
             .insert({
               player_id: player.id,
               balance: 1000
@@ -169,7 +171,7 @@ export const GameList = () => {
       if (error) throw error;
       
       // Redirect to the bidding arena
-      window.location.href = `/arena/${gameId}`;
+      navigate(`/arena/${gameId}`);
       
     } catch (error) {
       console.error("Error starting game:", error);
@@ -178,7 +180,6 @@ export const GameList = () => {
         description: "Failed to start the game. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setIsStartingGame(null);
     }
   };

@@ -21,18 +21,32 @@ const BiddingArena = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState<Game | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "You must be logged in to access the bidding arena",
-        variant: "destructive",
+    // First check if we have a user in context
+    if (user) {
+      setAuthenticated(true);
+    } else {
+      // If not, double-check with Supabase directly
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setAuthenticated(true);
+        } else {
+          toast({
+            title: "Authentication Required",
+            description: "You must be logged in to access the bidding arena",
+            variant: "destructive",
+          });
+          navigate("/auth");
+        }
       });
-      navigate("/auth");
-      return;
     }
+  }, [user, navigate]);
 
+  useEffect(() => {
+    if (!authenticated) return;
+    
     if (!gameId) {
       toast({
         title: "Game Not Found",
@@ -65,7 +79,7 @@ const BiddingArena = () => {
         .from("players")
         .select("*")
         .eq("game_id", gameId)
-        .eq("user_id", user.id);
+        .eq("user_id", user?.id);
 
       if (playerError || !playerData || playerData.length === 0) {
         toast({
@@ -77,7 +91,7 @@ const BiddingArena = () => {
         return;
       }
 
-      setGame(gameData);
+      setGame(gameData as Game);
       setLoading(false);
     };
 
@@ -95,7 +109,7 @@ const BiddingArena = () => {
           filter: `id=eq.${gameId}`
         },
         (payload) => {
-          // Fix: Add type checking to ensure payload.new exists and has a status property
+          // Add type checking to ensure payload.new exists and has correct properties
           if (payload.new && typeof payload.new === 'object' && 'status' in payload.new) {
             setGame(payload.new as Game);
             
@@ -115,9 +129,9 @@ const BiddingArena = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId, user, navigate]);
+  }, [gameId, user, navigate, authenticated]);
 
-  if (loading) {
+  if (loading && authenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-100 to-blue-200">
         <Navbar />
@@ -128,6 +142,10 @@ const BiddingArena = () => {
         </div>
       </div>
     );
+  }
+
+  if (!authenticated) {
+    return null; // Don't render anything while checking authentication
   }
 
   return (

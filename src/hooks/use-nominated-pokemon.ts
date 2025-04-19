@@ -23,7 +23,9 @@ export const useNominatedPokemon = (gameId: string) => {
         .eq("status", "active");
 
       if (!error && data) {
-        setNominatedPokemon(data as unknown as NominatedPokemon[]);
+        setNominatedPokemon(data as NominatedPokemon[]);
+      } else if (error) {
+        console.error("Error fetching nominated Pokémon:", error);
       }
     };
 

@@ -6,7 +6,6 @@ import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserContext } from "@/App";
 import { toast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
 
 interface PlayerBalance {
   balance: number;
@@ -26,7 +25,6 @@ interface Player {
 export const PlayersList = ({ gameId }: { gameId: string }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const { user } = useContext(UserContext);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -51,17 +49,18 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
             .eq("id", player.user_id)
             .single();
 
-          // Fetch balance using type assertions to work around type issues
+          // Fetch balance
           const { data: balanceData } = await supabase
-            .from('player_balances' as any)
+            .from('player_balances')
             .select("balance")
             .eq("player_id", player.id);
 
+          // Create a player object with properly typed data
           return {
             ...player,
             profiles: profileData || { username: "Unknown Player" },
-            player_balances: balanceData || [{ balance: 1000 }]
-          } as unknown as Player;
+            player_balances: balanceData ? balanceData : [{ balance: 1000 }]
+          } as Player;
         })
       );
 
@@ -70,7 +69,7 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
 
     fetchPlayers();
 
-    // Subscribe to player changes
+    // Subscribe to player balance changes
     const channel = supabase
       .channel(`game-players:${gameId}`)
       .on(
@@ -78,8 +77,7 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
         {
           event: '*',
           schema: 'public',
-          table: 'player_balances',
-          filter: `game_id=eq.${gameId}`
+          table: 'player_balances'
         },
         () => {
           fetchPlayers();
