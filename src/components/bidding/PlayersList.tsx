@@ -1,8 +1,12 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { UserContext } from "@/App";
+import { toast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface PlayerBalance {
   balance: number;
@@ -21,6 +25,8 @@ interface Player {
 
 export const PlayersList = ({ gameId }: { gameId: string }) => {
   const [players, setPlayers] = useState<Player[]>([]);
+  const { user } = useContext(UserContext);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -55,7 +61,7 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
             ...player,
             profiles: profileData || { username: "Unknown Player" },
             player_balances: balanceData || [{ balance: 1000 }]
-          } as Player;
+          } as unknown as Player;
         })
       );
 
@@ -86,27 +92,44 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
     };
   }, [gameId]);
 
+  const viewCollection = (playerId: string) => {
+    toast({
+      title: "Coming Soon",
+      description: "The collection feature is under development"
+    });
+  };
+
   return (
-    <Card className="bg-gray-800 border-gray-700">
-      <CardHeader>
-        <CardTitle className="text-white">Players</CardTitle>
+    <Card className="bg-gray-100 border-gray-300 h-full">
+      <CardHeader className="bg-gray-200 pb-3">
+        <CardTitle className="text-xl">Participants</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-3">
+        <div className="space-y-3">
           {players.map((player) => (
             <div
               key={player.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-gray-700"
+              className="flex flex-col bg-white p-3 rounded-lg border border-gray-200 shadow-sm"
             >
-              <div className="flex items-center gap-2">
-                <User className="text-gray-400" />
-                <span className="text-white">
-                  {player.profiles?.username || "Unknown Player"}
-                </span>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <User className="text-blue-500" />
+                  <span className="font-medium">
+                    {player.profiles?.username || "Unknown Player"}
+                  </span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-blue-500 border-blue-200 hover:bg-blue-50"
+                  onClick={() => viewCollection(player.id)}
+                >
+                  Collection
+                </Button>
               </div>
-              <span className="text-green-400">
-                ${player.player_balances[0]?.balance || 1000}
-              </span>
+              <div className="text-sm text-gray-600">
+                Balance: ${player.player_balances[0]?.balance || 1000}
+              </div>
             </div>
           ))}
         </div>
