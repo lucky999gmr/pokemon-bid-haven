@@ -139,3 +139,4 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
       </CardContent>
     </Card>
   );
+};
