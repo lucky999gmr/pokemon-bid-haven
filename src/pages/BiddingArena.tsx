@@ -95,11 +95,12 @@ const BiddingArena = () => {
           filter: `id=eq.${gameId}`
         },
         (payload) => {
-          if (payload.new && 'status' in payload.new) {
+          // Fix: Add type checking to ensure payload.new exists and has a status property
+          if (payload.new && typeof payload.new === 'object' && 'status' in payload.new) {
             setGame(payload.new as Game);
             
             // If game status changes to 'completed', redirect to results
-            if (payload.new.status === 'completed') {
+            if ((payload.new as Game).status === 'completed') {
               toast({
                 title: "Game Over",
                 description: "The bidding phase has ended"

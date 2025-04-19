@@ -35,7 +35,7 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
         .eq("status", "active");
 
       if (!error && data) {
-        setNominatedPokemon(data as NominatedPokemon[]);
+        setNominatedPokemon(data as unknown as NominatedPokemon[]);
       }
     };
 
@@ -132,6 +132,7 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
         .eq("player_id", playerData.id)
         .single();
 
+      // Fix: Added proper type checking to ensure balanceData exists and has a balance property
       if (balanceError || !balanceData || typeof balanceData.balance !== 'number') {
         throw new Error("Could not retrieve your balance");
       }
