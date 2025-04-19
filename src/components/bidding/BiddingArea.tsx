@@ -22,14 +22,15 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
 
   useEffect(() => {
     const fetchNominated = async () => {
+      // Use type assertion to work around TypeScript limitations
       const { data, error } = await supabase
-        .from("nominated_pokemon")
+        .from('nominated_pokemon')
         .select("*")
         .eq("game_id", gameId)
         .eq("status", "active");
 
       if (!error && data) {
-        setNominatedPokemon(data);
+        setNominatedPokemon(data as unknown as NominatedPokemon[]);
       }
     };
 
@@ -65,12 +66,14 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
       const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${searchValue}`);
       const data = await response.json();
 
-      await supabase.from("nominated_pokemon").insert({
+      // Use type assertion for the insert operation
+      await supabase.from('nominated_pokemon').insert({
         game_id: gameId,
         pokemon_id: data.id,
         pokemon_name: data.name,
         pokemon_image: data.sprites.other["official-artwork"].front_default,
-      });
+        current_price: 50
+      } as any);
 
       setSearchTerm("");
       toast({

@@ -4,15 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { User } from "lucide-react";
 
+interface PlayerBalance {
+  balance: number;
+}
+
+interface PlayerProfile {
+  username: string;
+}
+
 interface Player {
   id: string;
   user_id: string;
-  profiles: {
-    username: string;
-  };
-  player_balances: {
-    balance: number;
-  }[];
+  profiles: PlayerProfile;
+  player_balances: PlayerBalance[];
 }
 
 export const PlayersList = ({ gameId }: { gameId: string }) => {
@@ -20,18 +24,42 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
 
   useEffect(() => {
     const fetchPlayers = async () => {
-      const { data, error } = await supabase
+      // First get the players in the game
+      const { data: playersData, error: playersError } = await supabase
         .from("players")
-        .select(`
-          *,
-          profiles:user_id(username),
-          player_balances(balance)
-        `)
+        .select("id, user_id")
         .eq("game_id", gameId);
 
-      if (!error && data) {
-        setPlayers(data);
+      if (playersError || !playersData) {
+        console.error("Error fetching players:", playersError);
+        return;
       }
+
+      // Then for each player, fetch their profile and balance
+      const playersWithDetails = await Promise.all(
+        playersData.map(async (player) => {
+          // Fetch profile
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("username")
+            .eq("id", player.user_id)
+            .single();
+
+          // Fetch balance using raw query to work around type issues
+          const { data: balanceData } = await supabase
+            .from('player_balances')
+            .select("balance")
+            .eq("player_id", player.id);
+
+          return {
+            ...player,
+            profiles: profileData || { username: "Unknown Player" },
+            player_balances: balanceData || [{ balance: 1000 }]
+          } as Player;
+        })
+      );
+
+      setPlayers(playersWithDetails);
     };
 
     fetchPlayers();

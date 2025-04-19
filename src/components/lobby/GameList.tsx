@@ -149,12 +149,15 @@ export const GameList = () => {
         .eq('game_id', gameId);
       
       if (players) {
-        await Promise.all(players.map(player => 
-          supabase.from('player_balances').insert({
-            player_id: player.id,
-            balance: 1000
-          })
-        ));
+        // Use a for loop instead of Promise.all to avoid type issues
+        for (const player of players) {
+          await supabase
+            .from('player_balances')
+            .insert({
+              player_id: player.id,
+              balance: 1000
+            } as any);
+        }
       }
 
       // Then update game status
