@@ -97,7 +97,7 @@ export const PlayersList = ({
                     {player.profiles?.username || "Unknown Player"}
                   </span>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => viewCollection(player.id)} className="border-blue-200 hover:bg-blue-50 px-0 py-0 my-0 mx-0 rounded-sm text-left text-black text-sm font-light">
+                <Button variant="outline" size="sm" onClick={() => viewCollection(player.id)} className="border-blue-200 hover:bg-blue-50 px-0 py-0 my-0 mx-0 rounded-sm text-left text-sm font-light text-zinc-950">
                   Collection
                 </Button>
               </div>
