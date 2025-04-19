@@ -45,9 +45,9 @@ export const PlayersList = ({ gameId }: { gameId: string }) => {
             .eq("id", player.user_id)
             .single();
 
-          // Fetch balance using raw query to work around type issues
+          // Fetch balance using type assertions to work around type issues
           const { data: balanceData } = await supabase
-            .from('player_balances')
+            .from('player_balances' as any)
             .select("balance")
             .eq("player_id", player.id);
 

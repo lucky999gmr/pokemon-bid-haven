@@ -149,14 +149,14 @@ export const GameList = () => {
         .eq('game_id', gameId);
       
       if (players) {
-        // Use a for loop instead of Promise.all to avoid type issues
+        // Use a for loop with type assertions to avoid TypeScript errors
         for (const player of players) {
           await supabase
-            .from('player_balances')
+            .from('player_balances' as any)
             .insert({
               player_id: player.id,
               balance: 1000
-            } as any);
+            });
         }
       }
 
