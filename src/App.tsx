@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +14,7 @@ import Lobby from "./pages/Lobby";
 import Profile from "./pages/Profile";
 import { supabase } from "./integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
+import BiddingArena from "./pages/BiddingArena";
 
 export const ThemeContext = createContext({ 
   isDarkMode: false, 
@@ -31,7 +31,6 @@ const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  // Initialize theme from localStorage or system preference
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
@@ -40,7 +39,6 @@ const App = () => {
     }
   }, []);
 
-  // Toggle theme function
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
     if (!isDarkMode) {
@@ -52,14 +50,11 @@ const App = () => {
     }
   };
 
-  // Check for authenticated user
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user || null);
     });
 
-    // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user || null);
@@ -84,6 +79,7 @@ const App = () => {
                 <Route path="/how-to-play" element={<HowToPlay />} />
                 <Route path="/lobby" element={<Lobby />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/arena/:gameId" element={<BiddingArena />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

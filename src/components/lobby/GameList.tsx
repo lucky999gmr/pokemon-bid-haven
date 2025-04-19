@@ -138,33 +138,41 @@ export const GameList = () => {
   };
 
   const startGame = async (gameId: string) => {
-    if (isStartingGame) return; // Prevent multiple clicks
+    if (isStartingGame) return;
     
     setIsStartingGame(gameId);
     try {
+      // First create initial balances for all players
+      const { data: players } = await supabase
+        .from('players')
+        .select('id')
+        .eq('game_id', gameId);
+      
+      if (players) {
+        await Promise.all(players.map(player => 
+          supabase.from('player_balances').insert({
+            player_id: player.id,
+            balance: 1000
+          })
+        ));
+      }
+
+      // Then update game status
       const { error } = await supabase
         .from('games')
         .update({ status: 'in_progress' })
         .eq('id', gameId);
       
-      if (error) {
-        console.error("Error starting game:", error);
-        toast({
-          title: "Error",
-          description: "Failed to start the game. Please try again.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Game started successfully!",
-        });
-      }
+      if (error) throw error;
+      
+      // Redirect to the bidding arena
+      window.location.href = `/arena/${gameId}`;
+      
     } catch (error) {
-      console.error("Unexpected error starting game:", error);
+      console.error("Error starting game:", error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: "Failed to start the game. Please try again.",
         variant: "destructive",
       });
     } finally {
