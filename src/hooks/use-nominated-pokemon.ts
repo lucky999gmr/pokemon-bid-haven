@@ -9,6 +9,10 @@ export interface NominatedPokemon {
   pokemon_image: string;
   current_price: number;
   current_bidder_id: string | null;
+  current_turn_player_id: string | null;
+  last_bid_at: string | null;
+  auction_status: 'active' | 'completed' | 'expired';
+  time_per_turn: number;
 }
 
 export const useNominatedPokemon = (gameId: string) => {
