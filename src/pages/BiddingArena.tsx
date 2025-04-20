@@ -8,10 +8,12 @@ import { PlayersList } from "@/components/bidding/PlayersList";
 import { BiddingArea } from "@/components/bidding/BiddingArea";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { useNominationTurns } from "@/hooks/use-nomination-turns";
 
 interface Game {
   id: string;
   status: string;
+  current_nominator_id?: string | null;
   // Add other game properties as needed
 }
 
@@ -22,6 +24,7 @@ const BiddingArena = () => {
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState<Game | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
+  const { currentNominatorId } = useNominationTurns(gameId || "");
 
   // First check authentication
   useEffect(() => {

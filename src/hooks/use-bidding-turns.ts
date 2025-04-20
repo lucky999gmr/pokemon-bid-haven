@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
@@ -177,6 +178,7 @@ export const useBiddingTurns = (
     }
   };
 
+  // Modified to accept fixed bid increments
   const placeBid = async (amount: number) => {
     if (!isMyTurn || !user || !nominationId) {
       toast({

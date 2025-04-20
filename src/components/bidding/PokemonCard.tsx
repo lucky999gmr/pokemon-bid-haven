@@ -1,5 +1,5 @@
 
-import { useState, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ interface PokemonCardProps {
 
 export const PokemonCard = ({ pokemon, gameId }: PokemonCardProps) => {
   const { user } = useContext(UserContext);
-  const [bidAmount, setBidAmount] = useState(pokemon.current_price + 50);
+  const [highestBidderName, setHighestBidderName] = useState<string>("");
   const { 
     currentTurn, 
     isMyTurn, 
@@ -26,6 +26,29 @@ export const PokemonCard = ({ pokemon, gameId }: PokemonCardProps) => {
     checkExpiredAuction 
   } = useBiddingTurns(gameId, pokemon.id);
 
+  useEffect(() => {
+    const fetchBidderName = async () => {
+      if (!pokemon.current_bidder_id) return;
+      
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", pokemon.current_bidder_id)
+        .single();
+        
+      if (error) {
+        console.error("Error fetching bidder name:", error);
+        return;
+      }
+      
+      if (data) {
+        setHighestBidderName(data.username || "Unknown Player");
+      }
+    };
+    
+    fetchBidderName();
+  }, [pokemon.current_bidder_id]);
+
   const formatTimeRemaining = (seconds: number | null) => {
     if (seconds === null) return "--:--";
     const mins = Math.floor(seconds / 60);
@@ -33,28 +56,8 @@ export const PokemonCard = ({ pokemon, gameId }: PokemonCardProps) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleBidAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > pokemon.current_price) {
-      setBidAmount(value);
-    }
-  };
-
-  const handleBidSubmit = async () => {
-    if (bidAmount <= pokemon.current_price) {
-      toast({
-        title: "Invalid Bid",
-        description: "Your bid must be higher than the current price",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const success = await placeBid(bidAmount);
-    if (success) {
-      setBidAmount(prevBid => prevBid + 50);
-    }
-  };
+  const handleBid25 = () => placeBid(pokemon.current_price + 25);
+  const handleBid50 = () => placeBid(pokemon.current_price + 50);
 
   const handlePass = async () => {
     await passTurn();
@@ -64,12 +67,17 @@ export const PokemonCard = ({ pokemon, gameId }: PokemonCardProps) => {
 
   return (
     <Card className="bg-white border-gray-200 overflow-hidden">
-      <div className="bg-gray-100 p-3">
+      <div className="bg-gray-100 p-3 relative">
         <img
           src={pokemon.pokemon_image}
           alt={pokemon.pokemon_name}
           className="w-32 h-32 mx-auto"
         />
+        {highestBidderName && (
+          <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+            Highest: {highestBidderName}
+          </div>
+        )}
       </div>
       <CardContent className="p-4">
         <h3 className="text-lg font-semibold text-center mt-2 capitalize">
@@ -91,19 +99,18 @@ export const PokemonCard = ({ pokemon, gameId }: PokemonCardProps) => {
         
         {isMyTurn ? (
           <div className="mt-4 space-y-2">
-            <div className="flex gap-2">
-              <input
-                type="number"
-                value={bidAmount}
-                onChange={handleBidAmountChange}
-                className="w-full rounded border border-gray-300 p-2 text-sm"
-                min={pokemon.current_price + 1}
-              />
+            <div className="grid grid-cols-2 gap-2">
               <Button 
-                onClick={handleBidSubmit}
+                onClick={handleBid25}
                 className="bg-green-500 hover:bg-green-600"
               >
-                Bid
+                Bid +$25
+              </Button>
+              <Button 
+                onClick={handleBid50}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                Bid +$50
               </Button>
             </div>
             <Button 

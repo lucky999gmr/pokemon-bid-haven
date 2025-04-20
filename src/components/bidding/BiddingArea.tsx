@@ -1,7 +1,9 @@
+
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PokemonSearch } from "./PokemonSearch";
 import { PokemonCard } from "./PokemonCard";
 import { useNominatedPokemon } from "@/hooks/use-nominated-pokemon";
+import { useNominationTurns } from "@/hooks/use-nomination-turns";
 import { useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
@@ -9,6 +11,7 @@ import { UserContext } from "@/App";
 export const BiddingArea = ({ gameId }: { gameId: string }) => {
   const nominatedPokemon = useNominatedPokemon(gameId);
   const { user } = useContext(UserContext);
+  const { isMyTurn, currentNominatorId } = useNominationTurns(gameId);
 
   // Initialize turn for new nominations
   useEffect(() => {
@@ -56,11 +59,15 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
         <CardTitle className="text-white text-2xl text-center">Pokémon Bidding Arena</CardTitle>
       </CardHeader>
       <CardContent className="p-6">
-        <PokemonSearch gameId={gameId} />
+        <PokemonSearch gameId={gameId} isMyTurn={isMyTurn} currentNominatorId={currentNominatorId} />
 
         {nominatedPokemon.length === 0 ? (
           <div className="text-center py-8 bg-white rounded-lg shadow">
-            <p className="text-gray-600">No Pokémon nominated yet. Search and nominate one to start bidding!</p>
+            <p className="text-gray-600">
+              {isMyTurn 
+                ? "It's your turn to nominate a Pokémon. Search and nominate one to start bidding!"
+                : "Waiting for the current player to nominate a Pokémon."}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
