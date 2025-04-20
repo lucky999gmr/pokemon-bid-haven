@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
@@ -17,13 +16,11 @@ export const useBiddingTurns = (
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Clear timer when component unmounts or nominationId changes
     return () => {
       if (timerId) clearInterval(timerId);
     };
   }, [timerId]);
 
-  // Fetch the players in the game
   useEffect(() => {
     const fetchPlayers = async () => {
       const { data, error } = await supabase
@@ -44,7 +41,6 @@ export const useBiddingTurns = (
     fetchPlayers();
   }, [gameId]);
 
-  // Fetch and monitor the current turn
   useEffect(() => {
     if (!nominationId) return;
 
@@ -52,7 +48,16 @@ export const useBiddingTurns = (
       setLoading(true);
       const { data, error } = await supabase
         .from("nominated_pokemon")
-        .select("current_turn_player_id, last_bid_at, time_per_turn")
+        .select(`
+          current_turn_player_id, 
+          last_bid_at, 
+          time_per_turn,
+          current_bidder_id,
+          current_price,
+          pokemon_id,
+          pokemon_name,
+          pokemon_image
+        `)
         .eq("id", nominationId)
         .single();
 
@@ -65,7 +70,6 @@ export const useBiddingTurns = (
       if (data) {
         setCurrentTurn(data.current_turn_player_id);
         
-        // Calculate time remaining
         if (data.last_bid_at && data.time_per_turn) {
           const lastBidTime = new Date(data.last_bid_at).getTime();
           const currentTime = new Date().getTime();
@@ -74,7 +78,6 @@ export const useBiddingTurns = (
           
           setTimeRemaining(Math.round(remaining));
 
-          // Set up timer
           if (timerId) clearInterval(timerId);
           
           const timer = setInterval(() => {
@@ -96,7 +99,6 @@ export const useBiddingTurns = (
 
     fetchCurrentTurn();
 
-    // Subscribe to changes in the nomination
     const channel = supabase
       .channel(`nomination-turn:${nominationId}`)
       .on(
@@ -119,14 +121,12 @@ export const useBiddingTurns = (
     };
   }, [nominationId, gameId, timerId]);
 
-  // Check if it's the current user's turn
   useEffect(() => {
     if (!user || !currentTurn) {
       setIsMyTurn(false);
       return;
     }
 
-    // Find the player with the user_id matching the current user
     const player = players.find(p => p.user_id === user.id);
     
     if (player && player.id === currentTurn) {
@@ -140,10 +140,8 @@ export const useBiddingTurns = (
     }
   }, [currentTurn, user, players]);
 
-  // Handle turn expiration
   useEffect(() => {
     if (timeRemaining === 0 && nominationId) {
-      // Automatically pass turn when time expires
       (async () => {
         const nextPlayer = getNextPlayer();
         if (nextPlayer) {
@@ -190,7 +188,6 @@ export const useBiddingTurns = (
     }
 
     try {
-      // Get player info
       const { data: playerData, error: playerError } = await supabase
         .from("players")
         .select("id")
@@ -202,7 +199,6 @@ export const useBiddingTurns = (
         throw new Error("Could not find your player data");
       }
 
-      // Check balance
       const { data: balanceData, error: balanceError } = await supabase
         .from('player_balances')
         .select("balance")
@@ -217,7 +213,6 @@ export const useBiddingTurns = (
         throw new Error("Insufficient balance to place this bid");
       }
 
-      // Update nomination with new bid
       const nextPlayer = getNextPlayer();
       
       const { error: updateError } = await supabase
@@ -276,7 +271,13 @@ export const useBiddingTurns = (
     try {
       const { data: nomination, error: fetchError } = await supabase
         .from("nominated_pokemon")
-        .select("current_bidder_id, current_price")
+        .select(`
+          current_bidder_id, 
+          current_price, 
+          pokemon_id, 
+          pokemon_name, 
+          pokemon_image
+        `)
         .eq("id", nominationId)
         .single();
         
@@ -288,7 +289,6 @@ export const useBiddingTurns = (
         throw new Error("No bids have been placed yet");
       }
       
-      // Get the winner's player ID
       const { data: winnerPlayer, error: winnerError } = await supabase
         .from("players")
         .select("id")
@@ -300,7 +300,6 @@ export const useBiddingTurns = (
         throw new Error("Could not find winner's player data");
       }
       
-      // Deduct balance from winner
       const { error: balanceError } = await supabase
         .from("player_balances")
         .update({
@@ -315,7 +314,6 @@ export const useBiddingTurns = (
         throw new Error("Failed to update winner's balance");
       }
       
-      // Update nomination status
       const { error: updateError } = await supabase
         .from("nominated_pokemon")
         .update({
@@ -328,7 +326,6 @@ export const useBiddingTurns = (
         throw updateError;
       }
       
-      // Add to winner's collection
       const { error: collectionError } = await supabase
         .from("player_collections")
         .insert({
@@ -361,7 +358,6 @@ export const useBiddingTurns = (
 
   const checkExpiredAuction = async () => {
     if (timeRemaining === 0 && nominationId) {
-      // If no new bid after a full round of passes, complete the auction
       if (players.length > 0 && currentTurn === players[0].id) {
         await completeAuction();
       }

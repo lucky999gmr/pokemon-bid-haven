@@ -1,4 +1,3 @@
-
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PokemonSearch } from "./PokemonSearch";
 import { PokemonCard } from "./PokemonCard";

@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface PokemonCollectionItem {
+export interface PokemonCollectionItem {
   id: string;
   pokemon_name: string;
   pokemon_image: string;
@@ -27,7 +26,13 @@ export const PlayerCollection = ({ playerId }: { playerId: string }) => {
       if (error) {
         console.error("Error fetching collection:", error);
       } else if (data) {
-        setCollection(data);
+        const formattedData: PokemonCollectionItem[] = data.map(item => ({
+          id: item.id,
+          pokemon_name: item.pokemon_name,
+          pokemon_image: item.pokemon_image,
+          acquisition_price: item.acquisition_price
+        }));
+        setCollection(formattedData);
       }
       
       setLoading(false);

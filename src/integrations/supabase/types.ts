@@ -44,42 +44,61 @@ export type Database = {
       }
       nominated_pokemon: {
         Row: {
+          auction_status: string
           created_at: string | null
           current_bidder_id: string | null
           current_price: number
+          current_turn_player_id: string | null
           game_id: string | null
           id: string
+          last_bid_at: string | null
           pokemon_id: number
           pokemon_image: string
           pokemon_name: string
           status: string
+          time_per_turn: number
           updated_at: string | null
         }
         Insert: {
+          auction_status?: string
           created_at?: string | null
           current_bidder_id?: string | null
           current_price?: number
+          current_turn_player_id?: string | null
           game_id?: string | null
           id?: string
+          last_bid_at?: string | null
           pokemon_id: number
           pokemon_image: string
           pokemon_name: string
           status?: string
+          time_per_turn?: number
           updated_at?: string | null
         }
         Update: {
+          auction_status?: string
           created_at?: string | null
           current_bidder_id?: string | null
           current_price?: number
+          current_turn_player_id?: string | null
           game_id?: string | null
           id?: string
+          last_bid_at?: string | null
           pokemon_id?: number
           pokemon_image?: string
           pokemon_name?: string
           status?: string
+          time_per_turn?: number
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "nominated_pokemon_current_turn_player_id_fkey"
+            columns: ["current_turn_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "nominated_pokemon_game_id_fkey"
             columns: ["game_id"]
@@ -114,6 +133,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "player_balances_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_collections: {
+        Row: {
+          acquired_at: string | null
+          acquisition_price: number
+          id: string
+          player_id: string
+          pokemon_id: number
+          pokemon_image: string
+          pokemon_name: string
+        }
+        Insert: {
+          acquired_at?: string | null
+          acquisition_price: number
+          id?: string
+          player_id: string
+          pokemon_id: number
+          pokemon_image: string
+          pokemon_name: string
+        }
+        Update: {
+          acquired_at?: string | null
+          acquisition_price?: number
+          id?: string
+          player_id?: string
+          pokemon_id?: number
+          pokemon_image?: string
+          pokemon_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_collections_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
@@ -173,6 +230,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrement_balance: {
+        Args: { player_id: string; amount: number }
+        Returns: number
+      }
       generate_game_code: {
         Args: Record<PropertyKey, never>
         Returns: string
