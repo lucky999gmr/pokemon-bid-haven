@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
@@ -79,19 +78,19 @@ export const useBiddingTurns = (
           
           setTimeRemaining(Math.round(remaining));
 
-          if (timerId) clearInterval(timer);
+          if (timerId) clearInterval(timerId);
           
-          const timer = setInterval(() => {
+          const newTimer = setInterval(() => {
             setTimeRemaining(prev => {
               if (prev === null || prev <= 0) {
-                clearInterval(timer);
+                clearInterval(newTimer);
                 return 0;
               }
               return prev - 1;
             });
           }, 1000);
           
-          setTimerId(timer);
+          setTimerId(newTimer);
         }
       }
       
@@ -301,16 +300,20 @@ export const useBiddingTurns = (
         throw new Error("Could not find winner's player data");
       }
       
-      // FIX: This was trying to assign a Supabase query to a number
-      // Instead, we'll update the balance directly
+      const { data: newBalance, error: rpcError } = await supabase.rpc(
+        'decrement_balance', { 
+          player_id: winnerPlayer.id,
+          amount: nomination.current_price
+        }
+      );
+      
+      if (rpcError) {
+        throw new Error("Failed to update winner's balance");
+      }
+      
       const { error: balanceError } = await supabase
         .from("player_balances")
-        .update({ 
-          balance: supabase.rpc('decrement_balance', { 
-            player_id: winnerPlayer.id,
-            amount: nomination.current_price
-          })
-        })
+        .update({ balance: newBalance })
         .eq("player_id", winnerPlayer.id);
         
       if (balanceError) {
