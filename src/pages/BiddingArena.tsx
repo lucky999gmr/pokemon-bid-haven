@@ -23,14 +23,15 @@ const BiddingArena = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
 
+  // First check authentication
   useEffect(() => {
-    // First check if we have a user in context
-    if (user) {
-      setAuthenticated(true);
-    } else {
-      // If not, double-check with Supabase directly
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
+    const checkAuth = async () => {
+      if (user) {
+        setAuthenticated(true);
+      } else {
+        // If no user in context, check with Supabase directly
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user) {
           setAuthenticated(true);
         } else {
           toast({
@@ -40,31 +41,28 @@ const BiddingArena = () => {
           });
           navigate("/auth");
         }
-      });
-    }
+      }
+    };
+    
+    checkAuth();
   }, [user, navigate]);
 
+  // Then fetch game data and set up subscriptions once authenticated
   useEffect(() => {
-    if (!authenticated) return;
+    if (!authenticated || !gameId) return;
     
-    if (!gameId) {
-      toast({
-        title: "Game Not Found",
-        description: "No game ID provided",
-        variant: "destructive",
-      });
-      navigate("/lobby");
-      return;
-    }
-
-    const fetchGame = async () => {
-      const { data: gameData, error } = await supabase
+    const fetchGameAndCheckParticipation = async () => {
+      console.log("Fetching game data for", gameId);
+      
+      // Get the game
+      const { data: gameData, error: gameError } = await supabase
         .from("games")
         .select("*")
         .eq("id", gameId)
         .single();
 
-      if (error || !gameData) {
+      if (gameError || !gameData) {
+        console.error("Game not found:", gameError);
         toast({
           title: "Game Not Found",
           description: "The requested game could not be found",
@@ -82,6 +80,7 @@ const BiddingArena = () => {
         .eq("user_id", user?.id);
 
       if (playerError || !playerData || playerData.length === 0) {
+        console.error("User not a participant:", playerError);
         toast({
           title: "Access Denied",
           description: "You are not a participant in this game",
@@ -95,7 +94,7 @@ const BiddingArena = () => {
       setLoading(false);
     };
 
-    fetchGame();
+    fetchGameAndCheckParticipation();
 
     // Subscribe to game updates
     const channel = supabase
@@ -109,6 +108,7 @@ const BiddingArena = () => {
           filter: `id=eq.${gameId}`
         },
         (payload) => {
+          console.log("Game update received:", payload);
           // Add type checking to ensure payload.new exists and has correct properties
           if (payload.new && typeof payload.new === 'object' && 'status' in payload.new) {
             setGame(payload.new as Game);

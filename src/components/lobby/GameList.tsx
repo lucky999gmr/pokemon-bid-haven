@@ -42,8 +42,25 @@ export const GameList = () => {
         event: '*',
         schema: 'public',
         table: 'games'
-      }, () => {
-        fetchGames();
+      }, (payload) => {
+        // Check if one of the games was updated to "in_progress"
+        if (payload.eventType === 'UPDATE' && payload.new && typeof payload.new === 'object' && 'status' in payload.new) {
+          const updatedGame = payload.new as { id: string; status: string };
+          
+          if (updatedGame.status === 'in_progress') {
+            console.log('Game started:', updatedGame.id);
+            // Check if current user is in this game
+            checkIfUserInGame(updatedGame.id).then(isInGame => {
+              if (isInGame) {
+                console.log('User is in this game, redirecting to arena');
+                navigate(`/arena/${updatedGame.id}`);
+              }
+            });
+          }
+          fetchGames(); // Still fetch games to update the UI
+        } else {
+          fetchGames();
+        }
       })
       .on('postgres_changes', {
         event: '*',
@@ -57,7 +74,20 @@ export const GameList = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [navigate]);
+
+  // Check if the current user is a participant in the given game
+  const checkIfUserInGame = async (gameId: string): Promise<boolean> => {
+    if (!user) return false;
+    
+    const { data: playerData } = await supabase
+      .from('players')
+      .select('id')
+      .eq('game_id', gameId)
+      .eq('user_id', user.id);
+      
+    return !!playerData && playerData.length > 0;
+  };
 
   const fetchGames = async () => {
     try {
@@ -170,7 +200,7 @@ export const GameList = () => {
       
       if (error) throw error;
       
-      // Redirect to the bidding arena
+      // Redirect to the bidding arena - now handled by real-time subscription
       navigate(`/arena/${gameId}`);
       
     } catch (error) {
