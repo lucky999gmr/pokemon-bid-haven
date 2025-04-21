@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string | null
+          current_nominator_id: string | null
           host_id: string
           id: string
           max_players: number
@@ -23,6 +24,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string | null
+          current_nominator_id?: string | null
           host_id: string
           id?: string
           max_players?: number
@@ -33,6 +35,7 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string | null
+          current_nominator_id?: string | null
           host_id?: string
           id?: string
           max_players?: number
@@ -40,7 +43,15 @@ export type Database = {
           status?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "games_current_nominator_id_fkey"
+            columns: ["current_nominator_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nominated_pokemon: {
         Row: {

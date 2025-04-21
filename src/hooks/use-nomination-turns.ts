@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
@@ -27,7 +26,7 @@ export const useNominationTurns = (gameId: string) => {
 
       if (data) {
         setPlayers(data);
-        
+
         // If no nominator is set, initialize it to the first player
         if (!currentNominatorId && data.length > 0) {
           checkAndInitializeNominator(data[0].id);
@@ -44,14 +43,14 @@ export const useNominationTurns = (gameId: string) => {
       .from("games")
       .select("current_nominator_id")
       .eq("id", gameId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error checking current nominator:", error);
       return;
     }
 
-    if (!data.current_nominator_id) {
+    if (!data?.current_nominator_id) {
       await supabase
         .from("games")
         .update({ current_nominator_id: firstPlayerId })
@@ -67,7 +66,7 @@ export const useNominationTurns = (gameId: string) => {
         .from("games")
         .select("current_nominator_id")
         .eq("id", gameId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching nominator info:", error);
@@ -76,9 +75,9 @@ export const useNominationTurns = (gameId: string) => {
       }
 
       if (data) {
-        setCurrentNominatorId(data.current_nominator_id);
+        setCurrentNominatorId(data.current_nominator_id ?? null);
       }
-      
+
       setLoading(false);
     };
 
@@ -113,7 +112,7 @@ export const useNominationTurns = (gameId: string) => {
     }
 
     const player = players.find(p => p.user_id === user.id);
-    
+
     if (player && player.id === currentNominatorId) {
       setIsMyTurn(true);
       toast({
@@ -128,13 +127,13 @@ export const useNominationTurns = (gameId: string) => {
   // Move to the next player for nomination
   const moveToNextNominator = async () => {
     if (!currentNominatorId || players.length < 2) return;
-    
+
     const currentIndex = players.findIndex(p => p.id === currentNominatorId);
     if (currentIndex === -1) return;
-    
+
     const nextIndex = (currentIndex + 1) % players.length;
     const nextPlayerId = players[nextIndex].id;
-    
+
     try {
       const { error } = await supabase
         .from("games")
