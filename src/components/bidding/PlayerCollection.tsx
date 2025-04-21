@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Add ref for imperative refresh
 export interface PokemonCollectionItem {
   id: string;
   pokemon_name: string;
@@ -11,36 +13,44 @@ export interface PokemonCollectionItem {
   acquisition_price: number;
 }
 
-export const PlayerCollection = ({ playerId }: { playerId: string }) => {
+export const PlayerCollection = forwardRef(({ playerId }: { playerId: string }, ref) => {
   const [collection, setCollection] = useState<PokemonCollectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
+  // Allow parent to call refreshCollection() via ref
+  useImperativeHandle(ref, () => ({
+    refreshCollection: () => {
+      fetchCollection();
+    }
+  }));
+
+  const fetchCollection = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("player_collections")
+      .select("*")
+      .eq("player_id", playerId);
+
+    if (error) {
+      console.error("Error fetching collection:", error);
+    } else if (data) {
+      const formattedData: PokemonCollectionItem[] = data.map(item => ({
+        id: item.id,
+        pokemon_name: item.pokemon_name,
+        pokemon_image: item.pokemon_image,
+        acquisition_price: item.acquisition_price
+      }));
+      setCollection(formattedData);
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchCollection = async () => {
-      const { data, error } = await supabase
-        .from("player_collections")
-        .select("*")
-        .eq("player_id", playerId);
-
-      if (error) {
-        console.error("Error fetching collection:", error);
-      } else if (data) {
-        const formattedData: PokemonCollectionItem[] = data.map(item => ({
-          id: item.id,
-          pokemon_name: item.pokemon_name,
-          pokemon_image: item.pokemon_image,
-          acquisition_price: item.acquisition_price
-        }));
-        setCollection(formattedData);
-      }
-      
-      setLoading(false);
-    };
-
     if (open) {
       fetchCollection();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerId, open]);
 
   return (
@@ -95,4 +105,4 @@ export const PlayerCollection = ({ playerId }: { playerId: string }) => {
       </DialogContent>
     </Dialog>
   );
-};
+});
