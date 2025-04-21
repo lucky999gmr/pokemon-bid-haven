@@ -4,14 +4,23 @@ import { PokemonSearch } from "./PokemonSearch";
 import { PokemonCard } from "./PokemonCard";
 import { useNominatedPokemon } from "@/hooks/use-nominated-pokemon";
 import { useNominationTurns } from "@/hooks/use-nomination-turns";
-import { useEffect, useContext } from "react";
+import { useEffect, useContext, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
+import { PlayerCollection } from "./PlayerCollection";
 
 export const BiddingArea = ({ gameId }: { gameId: string }) => {
   const nominatedPokemon = useNominatedPokemon(gameId);
   const { user } = useContext(UserContext);
   const { isMyTurn, currentNominatorId } = useNominationTurns(gameId);
+  const collectionRef = useRef<{ refreshCollection: () => void }>(null);
+
+  // Refresh collection when Pokemon is sold
+  const handlePokemonSold = () => {
+    if (collectionRef.current) {
+      collectionRef.current.refreshCollection();
+    }
+  };
 
   // Initialize turn for new nominations
   useEffect(() => {
@@ -30,7 +39,8 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
       const { data: players, error: playersError } = await supabase
         .from("players")
         .select("id, user_id")
-        .eq("game_id", gameId);
+        .eq("game_id", gameId)
+        .order("joined_at", { ascending: true });
         
       if (playersError || !players || players.length === 0) {
         console.error("Could not fetch players for turn initialization");
@@ -39,10 +49,14 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
       
       // For each uninitialized nomination, set the first player's turn
       for (const pokemon of uninitialized) {
+        // Skip the nominator, start with the next player
+        const nominatorIndex = players.findIndex(p => p.user_id === pokemon.current_bidder_id);
+        const nextPlayerIndex = (nominatorIndex + 1) % players.length;
+        
         await supabase
           .from("nominated_pokemon")
           .update({
-            current_turn_player_id: players[0].id,
+            current_turn_player_id: players[nextPlayerIndex].id,
             last_bid_at: new Date().toISOString(),
             time_per_turn: 30 // 30 seconds per turn
           })
@@ -59,7 +73,12 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
         <CardTitle className="text-white text-2xl text-center">Pokémon Bidding Arena</CardTitle>
       </CardHeader>
       <CardContent className="p-6">
-        <PokemonSearch gameId={gameId} isMyTurn={isMyTurn} currentNominatorId={currentNominatorId} />
+        <div className="flex justify-between items-center mb-4">
+          <PokemonSearch gameId={gameId} isMyTurn={isMyTurn} currentNominatorId={currentNominatorId} />
+          {user && (
+            <PlayerCollection ref={collectionRef} playerId={user.id} />
+          )}
+        </div>
 
         {nominatedPokemon.length === 0 ? (
           <div className="text-center py-8 bg-white rounded-lg shadow">
@@ -72,7 +91,12 @@ export const BiddingArea = ({ gameId }: { gameId: string }) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {nominatedPokemon.map((pokemon) => (
-              <PokemonCard key={pokemon.id} pokemon={pokemon} gameId={gameId} />
+              <PokemonCard 
+                key={pokemon.id} 
+                pokemon={pokemon} 
+                gameId={gameId} 
+                onSold={handlePokemonSold}
+              />
             ))}
           </div>
         )}

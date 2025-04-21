@@ -2,7 +2,7 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Add ref for imperative refresh
@@ -13,7 +13,11 @@ export interface PokemonCollectionItem {
   acquisition_price: number;
 }
 
-export const PlayerCollection = forwardRef(({ playerId }: { playerId: string }, ref) => {
+export interface PlayerCollectionRef {
+  refreshCollection: () => void;
+}
+
+export const PlayerCollection = forwardRef<PlayerCollectionRef, { playerId: string }>(({ playerId }, ref) => {
   const [collection, setCollection] = useState<PokemonCollectionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -46,25 +50,46 @@ export const PlayerCollection = forwardRef(({ playerId }: { playerId: string }, 
     setLoading(false);
   };
 
+  // Set up realtime subscription for collection updates
   useEffect(() => {
-    if (open) {
-      fetchCollection();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerId, open]);
+    fetchCollection();
+    
+    const channel = supabase
+      .channel(`collection-updates:${playerId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'player_collections',
+          filter: `player_id=eq.${playerId}`
+        },
+        () => {
+          fetchCollection();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [playerId]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button 
-          className="text-blue-500 hover:text-blue-600 text-xs font-medium"
+          className="text-blue-500 hover:text-blue-600 text-xs font-medium bg-white px-3 py-1 rounded shadow"
         >
-          Collection ({collection.length})
+          My Collection ({collection.length})
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Pokémon Collection</DialogTitle>
+          <DialogTitle>My Pokémon Collection</DialogTitle>
+          <DialogDescription>
+            Pokémon you've won in auctions will appear here
+          </DialogDescription>
         </DialogHeader>
         {loading ? (
           <div className="flex justify-center py-8">Loading collection...</div>
@@ -106,3 +131,5 @@ export const PlayerCollection = forwardRef(({ playerId }: { playerId: string }, 
     </Dialog>
   );
 });
+
+PlayerCollection.displayName = "PlayerCollection";

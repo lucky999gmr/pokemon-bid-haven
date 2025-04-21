@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,7 +28,7 @@ export const useNominatedPokemon = (gameId: string) => {
         .from('nominated_pokemon')
         .select("*")
         .eq("game_id", gameId)
-        .in("auction_status", ["active"]);
+        .eq("auction_status", "active");
 
       if (!error && data) {
         setNominatedPokemon(data as NominatedPokemon[]);

@@ -27,7 +27,8 @@ export const useBiddingTurns = (
       const { data, error } = await supabase
         .from("players")
         .select("id, user_id")
-        .eq("game_id", gameId);
+        .eq("game_id", gameId)
+        .order("joined_at", { ascending: true });
 
       if (error) {
         console.error("Error fetching players:", error);
@@ -57,7 +58,8 @@ export const useBiddingTurns = (
           current_price,
           pokemon_id,
           pokemon_name,
-          pokemon_image
+          pokemon_image,
+          auction_status
         `)
         .eq("id", nominationId)
         .single();
@@ -110,7 +112,7 @@ export const useBiddingTurns = (
           table: "nominated_pokemon",
           filter: `id=eq.${nominationId}`,
         },
-        () => {
+        (payload) => {
           fetchCurrentTurn();
         }
       )
@@ -278,13 +280,19 @@ export const useBiddingTurns = (
           current_price, 
           pokemon_id, 
           pokemon_name, 
-          pokemon_image
+          pokemon_image,
+          auction_status
         `)
         .eq("id", nominationId)
         .single();
         
       if (fetchError || !nomination) {
         throw new Error("Could not retrieve auction details");
+      }
+      
+      // If auction is already completed, don't do anything
+      if (nomination.auction_status !== 'active') {
+        return false;
       }
       
       if (!nomination.current_bidder_id) {
@@ -365,10 +373,22 @@ export const useBiddingTurns = (
   };
 
   const checkExpiredAuction = async () => {
-    if (timeRemaining === 0 && nominationId) {
-      if (players.length > 0 && currentTurn === players[0].id) {
-        await completeAuction();
-      }
+    if (!nominationId) return;
+    
+    // Check if everyone has passed their turn
+    const { data: nominationData } = await supabase
+      .from("nominated_pokemon")
+      .select("current_turn_player_id, current_bidder_id, auction_status")
+      .eq("id", nominationId)
+      .single();
+      
+    if (!nominationData || nominationData.auction_status !== 'active') return;
+    
+    // If we've gone all the way around back to the original bidder
+    // or if the timer expired, complete the auction
+    if (timeRemaining === 0 || 
+        (players.length > 0 && players[0].id === currentTurn)) {
+      await completeAuction();
     }
   };
 

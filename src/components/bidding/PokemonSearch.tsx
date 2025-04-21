@@ -55,6 +55,22 @@ export const PokemonSearch = ({ gameId, isMyTurn, currentNominatorId }: PokemonS
         throw new Error("Could not retrieve your player information");
       }
 
+      // Get all players to set up the first bidder
+      const { data: allPlayers, error: playersError } = await supabase
+        .from("players")
+        .select("id, user_id")
+        .eq("game_id", gameId)
+        .order("joined_at", { ascending: true });
+        
+      if (playersError || !allPlayers || allPlayers.length === 0) {
+        throw new Error("Could not retrieve players");
+      }
+      
+      // Find the next player (not the nominator) to be the first bidder
+      let firstBidderIndex = allPlayers.findIndex(p => p.id === playerData.id);
+      let nextPlayerIndex = (firstBidderIndex + 1) % allPlayers.length;
+      const firstBidder = allPlayers[nextPlayerIndex].id;
+
       // Initial bid amount
       const initialBid = 50;
 
@@ -66,11 +82,14 @@ export const PokemonSearch = ({ gameId, isMyTurn, currentNominatorId }: PokemonS
         pokemon_image: data.sprites.other["official-artwork"].front_default,
         current_price: initialBid,
         current_bidder_id: user?.id, // Current user is the initial highest bidder
+        current_turn_player_id: firstBidder, // Set the next player as the first to bid
+        last_bid_at: new Date().toISOString(),
         status: "active",
-        auction_status: "active"
+        auction_status: "active",
+        time_per_turn: 30
       });
 
-      // Move to the next player for bidding
+      // Move to the next player for nomination
       moveToNextNominator();
 
       setSearchTerm("");

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -12,7 +12,6 @@ import { useBiddingTurns } from "@/hooks/use-bidding-turns";
 interface PokemonCardProps {
   pokemon: NominatedPokemon;
   gameId: string;
-  // Optionally, allow a prop for onSold (for refresh)
   onSold?: () => void;
 }
 
@@ -31,6 +30,7 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
 
   const [auctionCompleted, setAuctionCompleted] = useState(false);
   const [winnerName, setWinnerName] = useState<string>("");
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update instantly when auction completes
   useEffect(() => {
@@ -81,6 +81,26 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
     return () => { isMounted = false; };
   }, [pokemon.current_bidder_id]);
 
+  // Auto-refresh bidder info every 2 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (pokemon.current_bidder_id) {
+        supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", pokemon.current_bidder_id)
+          .single()
+          .then(({ data }) => {
+            if (data) {
+              setHighestBidderName(data.username || "Unknown Player");
+            }
+          });
+      }
+    }, 2000);
+    
+    return () => clearInterval(timer);
+  }, [pokemon.current_bidder_id]);
+
   const formatTimeRemaining = (seconds: number | null) => {
     if (seconds === null) return "--:--";
     const mins = Math.floor(seconds / 60);
@@ -93,9 +113,19 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
 
   const handlePass = async () => {
     await passTurn();
-    // Check if this completes a full round of passes
-    checkExpiredAuction();
+    // Set a timeout to check if this completes a full round of passes
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      checkExpiredAuction();
+    }, 1000);
   };
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   // Try to auto-complete auction if no one else bids and out of time (as a fallback)
   useEffect(() => {
@@ -196,4 +226,3 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
     </Card>
   );
 };
-
