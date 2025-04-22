@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserContext } from "@/App";
@@ -270,6 +271,7 @@ export const useBiddingTurns = (
 
   const completeAuction = async () => {
     if (!nominationId || !user) return;
+    
     try {
       const { data: nomination, error: fetchError } = await supabase
         .from("nominated_pokemon")
@@ -283,137 +285,87 @@ export const useBiddingTurns = (
         `)
         .eq("id", nominationId)
         .single();
-
+        
       if (fetchError || !nomination) {
         throw new Error("Could not retrieve auction details");
       }
-
+      
+      // If auction is already completed, don't do anything
       if (nomination.auction_status !== 'active') {
         return false;
       }
+      
       if (!nomination.current_bidder_id) {
         throw new Error("No bids have been placed yet");
       }
-
-      // Fetch winner's player and user data
+      
       const { data: winnerPlayer, error: winnerError } = await supabase
         .from("players")
-        .select("id, user_id")
+        .select("id")
         .eq("user_id", nomination.current_bidder_id)
         .eq("game_id", gameId)
         .single();
-
+        
       if (winnerError || !winnerPlayer) {
         throw new Error("Could not find winner's player data");
       }
-
-      // --- SPRITE & GEN fetch from PokéAPI ---
-      // We fetch the official-artwork for the nominated Pokémon
-      let highResSprite = nomination.pokemon_image;
-      let gen: string | null = null;
-      try {
-        const pokeRes = await fetch(
-          `https://pokeapi.co/api/v2/pokemon/${nomination.pokemon_id}`
-        );
-        if (pokeRes.ok) {
-          const pokeData = await pokeRes.json();
-          if (
-            pokeData.sprites &&
-            pokeData.sprites.other &&
-            pokeData.sprites.other["official-artwork"] &&
-            pokeData.sprites.other["official-artwork"].front_default
-          ) {
-            highResSprite =
-              pokeData.sprites.other["official-artwork"].front_default;
-          }
-          if (pokeData.species && pokeData.species.url) {
-            const s = await fetch(pokeData.species.url);
-            if (s.ok) {
-              const speciesData = await s.json();
-              gen = speciesData.generation?.name || null;
-            }
-          }
-        }
-      } catch (err) {
-        // Ignore and fallback to supplied image
-      }
-
-      // Decrement winner's balance via the RPC, only if they have enough
-      const { data: currentBalanceData, error: currentBalanceError } = await supabase
-        .from("player_balances")
-        .select("balance")
-        .eq("player_id", winnerPlayer.id)
-        .single();
-
-      if (currentBalanceError || !currentBalanceData) {
-        throw new Error("Could not retrieve winner's balance");
-      }
-
-      if (currentBalanceData.balance < nomination.current_price) {
-        throw new Error("Winner does not have enough coins!");
-      }
-
+      
       const { data: newBalance, error: rpcError } = await supabase.rpc(
-        'decrement_balance', {
-        player_id: winnerPlayer.id,
-        amount: nomination.current_price
-      }
+        'decrement_balance', { 
+          player_id: winnerPlayer.id,
+          amount: nomination.current_price
+        }
       );
-
-      if (rpcError) throw new Error("Failed to update winner's balance");
-
-      const { error: balanceUpdateError } = await supabase
+      
+      if (rpcError) {
+        throw new Error("Failed to update winner's balance");
+      }
+      
+      const { error: balanceError } = await supabase
         .from("player_balances")
         .update({ balance: newBalance })
         .eq("player_id", winnerPlayer.id);
-
-      if (balanceUpdateError) throw new Error("Failed to update balance");
-
-      // Add to winner's collection (if not already present)
-      const { data: existingCol } = await supabase
-        .from("player_collections")
-        .select("id")
-        .eq("player_id", winnerPlayer.id)
-        .eq("pokemon_id", nomination.pokemon_id);
-
-      if (!existingCol || existingCol.length === 0) {
-        const insertObj: any = {
-          player_id: winnerPlayer.id,
-          pokemon_id: nomination.pokemon_id,
-          pokemon_name: nomination.pokemon_name,
-          pokemon_image: highResSprite,
-          acquisition_price: nomination.current_price,
-        };
-        if (gen) insertObj.generation = gen;
-        const { error: insertColError } = await supabase
-          .from("player_collections")
-          .insert([insertObj]);
-        if (insertColError) throw new Error("Failed to add Pokémon to collection");
+        
+      if (balanceError) {
+        throw new Error("Failed to update winner's balance");
       }
-
-      // Mark auction as completed
+      
       const { error: updateError } = await supabase
         .from("nominated_pokemon")
         .update({
           status: "completed",
-          auction_status: "completed",
+          auction_status: "completed"
         })
         .eq("id", nominationId);
-
+        
       if (updateError) {
         throw updateError;
       }
-
+      
+      const { error: collectionError } = await supabase
+        .from("player_collections")
+        .insert({
+          player_id: winnerPlayer.id,
+          pokemon_id: nomination.pokemon_id,
+          pokemon_name: nomination.pokemon_name,
+          pokemon_image: nomination.pokemon_image,
+          acquisition_price: nomination.current_price
+        });
+        
+      if (collectionError) {
+        throw new Error("Failed to add Pokémon to winner's collection");
+      }
+      
       toast({
         title: "Auction Complete",
         description: `The Pokémon has been added to the winner's collection!`
       });
-
+      
       return true;
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error?.message ?? "Failed to complete auction",
+        description: error.message || "Failed to complete auction",
         variant: "destructive",
       });
       return false;

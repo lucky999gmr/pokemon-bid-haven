@@ -22,13 +22,13 @@ export const PlayerCollection = forwardRef<PlayerCollectionRef, { playerId: stri
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
 
+  // Allow parent to call refreshCollection() via ref
   useImperativeHandle(ref, () => ({
     refreshCollection: () => {
       fetchCollection();
     }
   }));
 
-  // Pull hi-res sprites for collection and cache in state
   const fetchCollection = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -39,26 +39,12 @@ export const PlayerCollection = forwardRef<PlayerCollectionRef, { playerId: stri
     if (error) {
       console.error("Error fetching collection:", error);
     } else if (data) {
-      // For each Pokémon, try to pull hi-res sprite if none exist
-      const formattedData: PokemonCollectionItem[] = await Promise.all(
-        data.map(async item => {
-          let sprite = item.pokemon_image;
-          if (!sprite || !sprite.includes("official-artwork")) {
-            try {
-              const pokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${item.pokemon_id}`);
-              if (pokeRes.ok) {
-                const pokeData = await pokeRes.json();
-                const hq = pokeData.sprites?.other?.["official-artwork"]?.front_default;
-                if (hq) sprite = hq;
-              }
-            } catch (err) { }
-          }
-          return {
-            ...item,
-            pokemon_image: sprite
-          };
-        })
-      );
+      const formattedData: PokemonCollectionItem[] = data.map(item => ({
+        id: item.id,
+        pokemon_name: item.pokemon_name,
+        pokemon_image: item.pokemon_image,
+        acquisition_price: item.acquisition_price
+      }));
       setCollection(formattedData);
     }
     setLoading(false);
@@ -83,7 +69,7 @@ export const PlayerCollection = forwardRef<PlayerCollectionRef, { playerId: stri
         }
       )
       .subscribe();
-
+      
     return () => {
       supabase.removeChannel(channel);
     };
@@ -92,7 +78,7 @@ export const PlayerCollection = forwardRef<PlayerCollectionRef, { playerId: stri
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button
+        <button 
           className="text-blue-500 hover:text-blue-600 text-xs font-medium bg-white px-3 py-1 rounded shadow"
         >
           My Collection ({collection.length})
@@ -112,36 +98,27 @@ export const PlayerCollection = forwardRef<PlayerCollectionRef, { playerId: stri
             No Pokémon in collection yet
           </div>
         ) : (
-          <ScrollArea className="h-[340px] pr-4">
+          <ScrollArea className="h-[300px] pr-4">
             <div className="grid grid-cols-3 gap-3">
               {collection.map((item) => (
                 <TooltipProvider key={item.id}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="bg-gray-900 p-2 rounded-lg flex flex-col items-center shadow animate-fadein">
-                        <img
-                          src={item.pokemon_image}
+                      <div className="bg-gray-100 p-2 rounded-lg flex flex-col items-center">
+                        <img 
+                          src={item.pokemon_image} 
                           alt={item.pokemon_name}
-                          className="w-20 h-20 object-contain"
+                          className="w-16 h-16 object-contain" 
                         />
-                        <span className="text-xs mt-1 capitalize truncate w-full text-center text-white">
+                        <span className="text-xs mt-1 capitalize truncate w-full text-center">
                           {item.pokemon_name}
-                        </span>
-                        <span className="text-[10px] mt-1 block text-gray-400">
-                          {item.acquired_at
-                            ? new Date(item.acquired_at).toLocaleDateString()
-                            : ""}
                         </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p className="capitalize text-white">{item.pokemon_name}</p>
-                      <p className="text-xs text-gray-300">
+                      <p className="capitalize">{item.pokemon_name}</p>
+                      <p className="text-xs text-gray-500">
                         Acquired for ${item.acquisition_price}
-                        <br />
-                        {item.acquired_at
-                          ? new Date(item.acquired_at).toLocaleDateString()
-                          : ""}
                       </p>
                     </TooltipContent>
                   </Tooltip>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useContext, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,26 +18,25 @@ interface PokemonCardProps {
 export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
   const { user } = useContext(UserContext);
   const [highestBidderName, setHighestBidderName] = useState<string>("");
-  const {
-    currentTurn,
-    isMyTurn,
-    timeRemaining,
-    placeBid,
-    passTurn,
+  const { 
+    currentTurn, 
+    isMyTurn, 
+    timeRemaining, 
+    placeBid, 
+    passTurn, 
     checkExpiredAuction,
-    completeAuction,
+    completeAuction
   } = useBiddingTurns(gameId, pokemon.id);
 
   const [auctionCompleted, setAuctionCompleted] = useState(false);
   const [winnerName, setWinnerName] = useState<string>("");
-  const [notification, setNotification] = useState<string | null>(null);
-  const [imgLoaded, setImgLoaded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch winner
+  // Update instantly when auction completes
   useEffect(() => {
     if (pokemon.auction_status === "completed") {
       setAuctionCompleted(true);
+      // Fetch winner info if available
       if (pokemon.current_bidder_id) {
         supabase
           .from("profiles")
@@ -45,24 +45,14 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
           .single()
           .then(({ data }) => {
             setWinnerName(data?.username || "Unknown Player");
-            setNotification(
-              `${pokemon.pokemon_name} sold to ${data?.username || "Unknown Player"
-              } for ${pokemon.current_price} coins!`
-            );
           });
       }
+      // Optionally call onSold so parent can refresh collection lists, etc.
       if (onSold) onSold();
     }
-  }, [pokemon.auction_status, pokemon.current_bidder_id, onSold, pokemon.current_price, pokemon.pokemon_name]);
+  }, [pokemon.auction_status, pokemon.current_bidder_id, onSold]);
 
-  // Animate notification
-  useEffect(() => {
-    if (notification) {
-      const t = setTimeout(() => setNotification(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [notification]);
-
+  // Always update highest bidder after each render, so it's freshest
   useEffect(() => {
     let isMounted = true;
     const fetchBidderName = async () => {
@@ -111,35 +101,6 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
     return () => clearInterval(timer);
   }, [pokemon.current_bidder_id]);
 
-  // Sprite logic: Use official-artwork whenever possible, at least 200x200
-  const [highResImage, setHighResImage] = useState<string>(pokemon.pokemon_image);
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchHighRes() {
-      try {
-        if (pokemon.pokemon_id) {
-          const pokeRes = await fetch(
-            `https://pokeapi.co/api/v2/pokemon/${pokemon.pokemon_id}`
-          );
-          if (pokeRes.ok) {
-            const pokeData = await pokeRes.json();
-            const sprite = pokeData.sprites?.other?.["official-artwork"]?.front_default;
-            if (sprite && !cancelled) setHighResImage(sprite);
-          }
-        }
-      } catch (e) {
-        // fallback to what's on nomination
-      }
-    }
-    fetchHighRes();
-    return () => { cancelled = true; }
-  }, [pokemon.pokemon_id, pokemon.pokemon_image]);
-
-  // Animation helpers
-  const cardClass = `bg-white border-gray-200 overflow-hidden shadow transition-all duration-300 ${imgLoaded ? "animate-fadein" : "opacity-0"
-    }`;
-  const pulseClass = "animate-pulse shadow-lg ring-2 ring-blue-400";
-
   const formatTimeRemaining = (seconds: number | null) => {
     if (seconds === null) return "--:--";
     const mins = Math.floor(seconds / 60);
@@ -147,32 +108,26 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleBid = async (increment: number) => {
-    const newBid = pokemon.current_price + increment;
-    const ok = await placeBid(newBid);
-    if (!ok) {
-      toast({
-        title: "Insufficient Coins",
-        description: "You do not have enough coins to place this bid.",
-        variant: "destructive"
-      });
-    }
-  };
+  const handleBid25 = () => placeBid(pokemon.current_price + 25);
+  const handleBid50 = () => placeBid(pokemon.current_price + 50);
 
   const handlePass = async () => {
     await passTurn();
+    // Set a timeout to check if this completes a full round of passes
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       checkExpiredAuction();
     }, 1000);
   };
 
+  // Clean up timeout on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
+  // Try to auto-complete auction if no one else bids and out of time (as a fallback)
   useEffect(() => {
     if (!auctionCompleted && timeRemaining === 0 && isMyTurn) {
       completeAuction();
@@ -182,116 +137,92 @@ export const PokemonCard = ({ pokemon, gameId, onSold }: PokemonCardProps) => {
 
   if (auctionCompleted) {
     return (
-      <>
-        {notification && (
-          <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-green-600 text-white text-lg px-6 py-3 rounded-lg shadow-lg animate-fadein">
-            {notification}
+      <Card className="bg-white border-green-300 overflow-hidden opacity-90 ring-2 ring-green-400 shadow-lg">
+        <div className="bg-green-100 p-3 flex flex-col items-center">
+          <img
+            src={pokemon.pokemon_image}
+            alt={pokemon.pokemon_name}
+            className="w-32 h-32 mx-auto opacity-75"
+          />
+          <div className="font-semibold text-green-700 mt-2 text-lg">SOLD</div>
+        </div>
+        <CardContent className="p-4 text-center">
+          <h3 className="text-lg font-semibold capitalize mb-2">
+            {pokemon.pokemon_name}
+          </h3>
+          <div className="mb-2">
+            The Pokémon is sold to{" "}
+            <span className="text-blue-600 font-medium">{winnerName || "..."}</span>!
           </div>
-        )}
-        <Card
-          className="bg-gray-900 border-green-500 overflow-hidden ring-2 ring-green-300 shadow-lg animate-fadein">
-          <div className="bg-green-100 p-3 flex flex-col items-center">
-            <img
-              src={highResImage}
-              alt={pokemon.pokemon_name}
-              className="w-48 h-48 mx-auto opacity-90"
-              style={{ filter: "drop-shadow(0 0 15px #22c55e80)" }}
-              onLoad={() => setImgLoaded(true)}
-            />
-            <div className="font-semibold text-green-700 mt-2 text-lg">SOLD</div>
-          </div>
-          <CardContent className="p-4 text-center">
-            <h3 className="text-lg font-semibold capitalize mb-2 text-white">
-              {pokemon.pokemon_name}
-            </h3>
-            <div className="mb-2 text-green-200">
-              The Pokémon is sold to{" "}
-              <span className="text-blue-300 font-bold">{winnerName || "..."}</span>!
-            </div>
-          </CardContent>
-        </Card>
-      </>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <>
-      {notification && (
-        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-blue-700 text-white text-lg px-6 py-3 rounded-lg shadow-lg animate-fadein">
-          {notification}
-        </div>
-      )}
-      <Card className={`${cardClass} border-2 border-blue-400`}>
-        <div className="bg-gradient-to-br from-blue-900 via-blue-700 to-pink-600 p-4 relative flex flex-col items-center justify-center">
-          <img
-            src={highResImage}
-            alt={pokemon.pokemon_name}
-            className={`w-52 h-52 mx-auto transition-opacity duration-700 ${imgLoaded ? "opacity-100" : "opacity-0"}
-              ${highestBidderName ? pulseClass : ""}`}
-            style={{ filter: "drop-shadow(0 0 25px #0073ff33)" }}
-            onLoad={() => setImgLoaded(true)}
-          />
-          {highestBidderName && (
-            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full animate-pulse">
-              Highest: {highestBidderName}
-            </div>
-          )}
-        </div>
-        <CardContent className="p-5">
-          <h3 className="text-2xl font-extrabold text-center capitalize text-gray-900 dark:text-white mb-2 tracking-tight">
-            {pokemon.pokemon_name}
-          </h3>
-          <div className="flex justify-between items-center mt-2">
-            <span className="text-2xl text-rose-600 font-bold animate-pulse">
-              {`$${pokemon.current_price}`}
-            </span>
-            <div className="flex items-center gap-1 text-gray-700 dark:text-gray-200">
-              <Timer size={22} />
-              <span className="text-xl font-mono">
-                {formatTimeRemaining(timeRemaining)}
-              </span>
-            </div>
+    <Card className="bg-white border-gray-200 overflow-hidden">
+      <div className="bg-gray-100 p-3 relative">
+        <img
+          src={pokemon.pokemon_image}
+          alt={pokemon.pokemon_name}
+          className="w-32 h-32 mx-auto"
+        />
+        {highestBidderName && (
+          <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+            Highest: {highestBidderName}
           </div>
-          {isMyTurn ? (
-            <div className="mt-6 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  onClick={() => handleBid(25)}
-                  className="bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 font-bold text-white text-lg animate-in fade-in"
-                >
-                  Bid +$25
-                </Button>
-                <Button
-                  onClick={() => handleBid(50)}
-                  className="bg-gradient-to-r from-pink-500 to-blue-600 hover:from-pink-600 font-bold text-white text-lg animate-in fade-in"
-                >
-                  Bid +$50
-                </Button>
-              </div>
-              <Button
-                onClick={handlePass}
-                variant="outline"
-                className="w-full border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-200 font-bold mt-1"
+        )}
+      </div>
+      <CardContent className="p-4">
+        <h3 className="text-lg font-semibold text-center mt-2 capitalize">
+          {pokemon.pokemon_name}
+        </h3>
+        <div className="flex justify-between items-center mt-2">
+          <span className="text-green-600 text-lg font-bold">
+            ${pokemon.current_price}
+          </span>
+          <div className="flex items-center gap-1 text-gray-500">
+            <Timer size={16} />
+            <span className="text-sm font-mono">
+              {formatTimeRemaining(timeRemaining)}
+            </span>
+          </div>
+        </div>
+        {isMyTurn ? (
+          <div className="mt-4 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                onClick={handleBid25}
+                className="bg-green-500 hover:bg-green-600"
               >
-                Pass Turn
+                Bid +$25
+              </Button>
+              <Button 
+                onClick={handleBid50}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                Bid +$50
               </Button>
             </div>
-          ) : (
-            <div className="mt-6 p-2 bg-gray-100 dark:bg-gray-700 rounded text-center text-base text-gray-600 dark:text-gray-300 font-medium animate-pulse">
-              {currentTurn ? "Waiting for other player's turn" : "Waiting for bidding to start"}
-            </div>
-          )}
-          {pokemon.current_bidder_id && pokemon.current_bidder_id === user?.id && (
-            <div className="mt-3 text-center text-base text-blue-600 font-semibold animate-pulse">
-              You are the highest bidder
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
+            <Button 
+              onClick={handlePass}
+              variant="outline" 
+              className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
+            >
+              Pass Turn
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 p-2 bg-gray-100 rounded text-center text-sm text-gray-600">
+            {currentTurn ? "Waiting for other player's turn" : "Waiting for bidding to start"}
+          </div>
+        )}
+        {pokemon.current_bidder_id && pokemon.current_bidder_id === user?.id && (
+          <div className="mt-2 text-center text-sm text-blue-600 font-medium">
+            You are the highest bidder
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
-
-// Add animation classes
-// Fade-in: @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
-// Pulse: will use Tailwind's animate-pulse
